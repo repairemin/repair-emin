@@ -2,160 +2,119 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Tiến Thắng Center | Ultimate 3D PCB Prototype</title>
+    <title>Tiến Thắng Center | Hyper-Realistic 3D PCB</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        #hud {
-            position: absolute; top: 30px; left: 30px; color: #00f2ff;
-            z-index: 10; pointer-events: none; border-left: 2px solid #00f2ff; padding-left: 20px;
-        }
-        .loading-bar { width: 200px; height: 4px; background: rgba(0,242,255,0.2); margin-top: 10px; position: relative; }
-        .loading-fill { width: 0%; height: 100%; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; animation: fill 3s forwards; }
-        @keyframes fill { to { width: 100%; } }
+        #ui { position: absolute; top: 30px; left: 30px; color: #00f2ff; z-index: 100; pointer-events: none; }
+        .glitch-title { font-size: 2.5rem; font-weight: 900; text-shadow: 0 0 15px #00f2ff; letter-spacing: 5px; margin: 0; }
     </style>
 </head>
 <body>
 
-    <div id="hud">
-        <h1 style="margin:0; font-weight: 900; letter-spacing: 5px;">TIẾN THẮNG CENTER</h1>
-        <div style="font-size: 12px; font-family: monospace;">
-            DEVICE: HIGH-PRECISION MEASUREMENT BOARD<br>
-            VERSION: 2.0.26<br>
-            STATUS: REAL-TIME ASSEMBLY
+    <div id="ui">
+        <h1 class="glitch-title">TIẾN THẮNG CENTER</h1>
+        <div style="font-family: monospace; opacity: 0.8; margin-top: 10px;">
+            > RENDERING MODE: PBR_ULTRA<br>
+            > TEXTURE: SILKSCREEN_GOLD<br>
+            > STATUS: CALIBRATION_COMPLETE
         </div>
-        <div class="loading-bar"><div class="loading-fill"></div></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         let scene, camera, renderer, pcbGroup;
-        const components = [];
-
-        class ElectronicPart {
-            constructor(type, x, z, rotation = 0) {
-                this.group = new THREE.Group();
-                this.type = type;
-                this.createPart(type);
-                this.group.position.set(x, 60 + Math.random() * 40, z);
-                this.group.rotation.y = rotation;
-                this.targetY = 0.8;
-                this.velocity = 0;
-                this.gravity = 0.02 + Math.random() * 0.03;
-                
-                // Tạo Solder Pad (Chân hàn) bên dưới linh kiện
-                this.createPad(x, z, rotation, type);
-            }
-
-            createPad(x, z, rot, type) {
-                let padGeo;
-                if(type === 'IC') padGeo = new THREE.PlaneGeometry(10, 10);
-                else if(type === 'RES') padGeo = new THREE.PlaneGeometry(3, 1.5);
-                else padGeo = new THREE.CircleGeometry(2, 16);
-                
-                const pad = new THREE.Mesh(padGeo, new THREE.MeshStandardMaterial({color: 0xaaaaaa, metalness: 1, roughness: 0.2}));
-                pad.rotation.x = -Math.PI/2;
-                pad.position.set(x, 0.52, z);
-                pad.rotation.z = rot;
-                pcbGroup.add(pad);
-            }
-
-            createPart(type) {
-                if (type === 'IC') {
-                    const body = new THREE.Mesh(new THREE.BoxGeometry(8, 1.8, 8), new THREE.MeshStandardMaterial({color: 0x151515, metalness: 0.9}));
-                    this.group.add(body);
-                    const pinGeo = new THREE.BoxGeometry(0.3, 0.1, 1.5);
-                    const pinMat = new THREE.MeshStandardMaterial({color: 0xdddddd, metalness: 1});
-                    for(let i=-3.5; i<=3.5; i+=1) {
-                        for(let side=0; side<4; side++) {
-                            const p = new THREE.Mesh(pinGeo, pinMat);
-                            const angle = (side * Math.PI) / 2;
-                            p.position.set(Math.cos(angle)*4.4, -0.6, Math.sin(angle)*4.4 + (side%2===0 ? i : 0));
-                            if(side%2!==0) p.rotation.y = Math.PI/2;
-                            this.group.add(p);
-                        }
-                    }
-                } else if (type === 'CAP') {
-                    const body = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 5, 24), new THREE.MeshStandardMaterial({color: 0x004488, metalness: 0.6}));
-                    this.group.add(body);
-                    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.81, 1.81, 0.2, 24), new THREE.MeshStandardMaterial({color: 0xbbbbbb}));
-                    top.position.y = 2.5; this.group.add(top);
-                } else if (type === 'RES') {
-                    const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1.2), new THREE.MeshStandardMaterial({color: 0x222222}));
-                    this.group.add(body);
-                    const end = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 1.3), new THREE.MeshStandardMaterial({color: 0xcccccc, metalness: 1}));
-                    const e1 = end.clone(); e1.position.x = 0.8; this.group.add(e1);
-                    const e2 = end.clone(); e2.position.x = -0.8; this.group.add(e2);
-                }
-            }
-
-            update() {
-                if (this.group.position.y > this.targetY) {
-                    this.velocity += this.gravity;
-                    this.group.position.y -= this.velocity;
-                    if(this.group.position.y <= this.targetY) {
-                        this.group.position.y = this.targetY;
-                        // Hiệu ứng rung nhẹ khi chạm board
-                    }
-                }
-            }
-        }
 
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(50, 50, 50);
+            camera.position.set(35, 30, 35);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x010505);
-            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ReinhardToneMapping;
             document.body.appendChild(renderer.domElement);
 
             pcbGroup = new THREE.Group();
             scene.add(pcbGroup);
 
-            // 1. PCB với lớp phủ bóng (Glossy Mask)
-            const pcb = new THREE.Mesh(
-                new THREE.BoxGeometry(60, 1, 60),
-                new THREE.MeshStandardMaterial({ color: 0x06281a, roughness: 0.1, metalness: 0.2 })
-            );
+            // 1. PCB VỚI MÀU XANH SM (Solder Mask) SÂU & BÓNG
+            const pcbGeo = new THREE.BoxGeometry(45, 1.2, 45);
+            const pcbMat = new THREE.MeshStandardMaterial({ 
+                color: 0x021a10, 
+                roughness: 0.1, 
+                metalness: 0.3 
+            });
+            const pcb = new THREE.Mesh(pcbGeo, pcbMat);
             pcbGroup.add(pcb);
 
-            // 2. Đường mạch đồng phức tạp
-            const traceMat = new THREE.MeshStandardMaterial({ color: 0x00ffaa, emissive: 0x004422 });
-            for(let i=0; i<40; i++) {
-                const path = new THREE.BoxGeometry(Math.random()*30, 0.05, 0.3);
-                const t = new THREE.Mesh(path, traceMat);
-                t.position.set((Math.random()-0.5)*50, 0.55, (Math.random()-0.5)*50);
-                if(Math.random() > 0.5) t.rotation.y = Math.PI/2;
-                pcbGroup.add(t);
+            // 2. VẼ CHỮ "TIẾN THẮNG CENTER" TRỰC TIẾP TRÊN MẶT MẠCH (Silkscreen)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 1024; canvas.height = 1024;
+            ctx.fillStyle = "#00f2ff";
+            ctx.font = "Bold 80px Arial";
+            ctx.fillText("TIẾN THẮNG CENTER", 150, 200);
+            const textTex = new THREE.CanvasTexture(canvas);
+            const textMat = new THREE.MeshBasicMaterial({ map: textTex, transparent: true, opacity: 0.6 });
+            const textPlate = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), textMat);
+            textPlate.rotation.x = -Math.PI/2;
+            textPlate.position.y = 0.61;
+            pcbGroup.add(textPlate);
+
+            // 3. CHIP MCU CÓ CHÂN VÀ KÝ HIỆU LASER
+            const chipGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(12, 1.5, 12), new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.4}));
+            chipGroup.add(body);
+            
+            // Vẽ chân chip (mạ bạc)
+            const pinGeo = new THREE.BoxGeometry(0.4, 0.1, 2);
+            const pinMat = new THREE.MeshStandardMaterial({color: 0xffffff, metalness: 1, roughness: 0.1});
+            for(let i=-5; i<=5; i+=1.2) {
+                const p1 = new THREE.Mesh(pinGeo, pinMat); p1.position.set(-6.5, -0.6, i); chipGroup.add(p1);
+                const p2 = new THREE.Mesh(pinGeo, pinMat); p2.position.set(6.5, -0.6, i); chipGroup.add(p2);
+            }
+            chipGroup.position.y = 1.3;
+            pcbGroup.add(chipGroup);
+
+            // 4. LINH KIỆN TỤ ĐIỆN VÀ TRỞ CHI TIẾT
+            for(let i=0; i<15; i++) {
+                const rGroup = new THREE.Group();
+                const rBody = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 3, 16), new THREE.MeshStandardMaterial({color: 0x225588}));
+                rBody.rotation.z = Math.PI/2;
+                rGroup.add(rBody);
+                // Vạch màu trên điện trở
+                const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.2, 16), new THREE.MeshBasicMaterial({color: 0xffd700}));
+                ring.rotation.z = Math.PI/2; ring.position.x = 0.5; rGroup.add(ring);
+                
+                rGroup.position.set((Math.random()-0.5)*35, 1.2, (Math.random()-0.5)*35);
+                pcbGroup.add(rGroup);
             }
 
-            // 3. Vias (Lỗ thông mạch mạ vàng)
-            const viaGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.1, 8);
-            const viaMat = new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 1});
-            for(let i=0; i<100; i++) {
-                const v = new THREE.Mesh(viaGeo, viaMat);
-                v.position.set((Math.random()-0.5)*55, 0, (Math.random()-0.5)*55);
-                pcbGroup.add(v);
+            // 5. ĐƯỜNG MẠCH MẠ VÀNG (GOLD TRACES)
+            const traceMat = new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 1, roughness: 0.2});
+            for(let j=0; j<40; j++) {
+                const w = Math.random()*20;
+                const trace = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, 0.4), traceMat);
+                trace.position.set((Math.random()-0.5)*40, 0.61, (Math.random()-0.5)*40);
+                if(Math.random()>0.5) trace.rotation.y = Math.PI/2;
+                pcbGroup.add(trace);
             }
 
-            // Sinh linh kiện
-            components.push(new ElectronicPart('IC', 0, 0, 0));
-            for(let i=0; i<8; i++) components.push(new ElectronicPart('CAP', (Math.random()-0.5)*45, (Math.random()-0.5)*45));
-            for(let i=0; i<25; i++) components.push(new ElectronicPart('RES', (Math.random()-0.5)*45, (Math.random()-0.5)*45, Math.random()*Math.PI));
-
-            // Ánh sáng Studio
-            const spot = new THREE.SpotLight(0xffffff, 2);
-            spot.position.set(40, 80, 40);
-            scene.add(spot);
+            // ÁNH SÁNG STUDIO ĐỂ TẠO ĐỘ BÓNG
+            const light1 = new THREE.PointLight(0xffffff, 1.5, 100);
+            light1.position.set(20, 30, 20);
+            scene.add(light1);
+            const light2 = new THREE.PointLight(0x00f2ff, 1, 100);
+            light2.position.set(-20, 20, -20);
+            scene.add(light2);
             scene.add(new THREE.AmbientLight(0x222222));
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            components.forEach(c => c.update());
-            pcbGroup.rotation.y += 0.0015;
+            pcbGroup.rotation.y += 0.003;
+            pcbGroup.rotation.x = Math.sin(Date.now()*0.001)*0.1;
             camera.lookAt(0,0,0);
             renderer.render(scene, camera);
         }

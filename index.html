@@ -2,118 +2,124 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Tiến Thắng Center | 3D PCB Assembly</title>
+    <title>Tiến Thắng Center | Next-Gen 3D PCB</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
-        #canvas-container { position: fixed; width: 100%; height: 100%; }
+        body { margin: 0; background: radial-gradient(circle at center, #001520 0%, #000 100%); overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #hud {
-            position: absolute; top: 30px; left: 30px; color: #00f2ff;
-            z-index: 10; pointer-events: none; text-shadow: 0 0 10px #00f2ff;
+            position: absolute; top: 40px; left: 40px; color: #00f2ff;
+            z-index: 10; pointer-events: none;
         }
-        .label { font-size: 2.5rem; font-weight: bold; margin: 0; letter-spacing: 5px; }
-        .data { font-size: 0.9rem; opacity: 0.7; border-left: 3px solid #00f2ff; padding-left: 10px; margin-top: 10px; }
+        .glitch {
+            font-size: 3rem; font-weight: 900; letter-spacing: 10px;
+            text-transform: uppercase; margin: 0;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #00f2ff, 0 0 20px #00f2ff; }
+            to { text-shadow: 0 0 20px #00f2ff, 0 0 40px #00f2ff; }
+        }
+        .status-box {
+            margin-top: 15px; padding: 15px; border: 1px solid rgba(0, 242, 255, 0.3);
+            background: rgba(0, 30, 40, 0.5); backdrop-filter: blur(10px);
+            font-family: monospace; font-size: 0.8rem; line-height: 1.6;
+        }
     </style>
 </head>
 <body>
 
     <div id="hud">
-        <p class="label">TIẾN THẮNG CENTER</p>
-        <div class="data">
-            PCB ID: 77-88-TT<br>
-            STATUS: ASSEMBLING COMPONENTS...<br>
-            VOLTAGE: 220.45V | TEMP: 32°C
+        <h1 class="glitch">Tiến Thắng</h1>
+        <div class="status-box">
+            > SCANNING MAINBOARD... [OK]<br>
+            > ANALYZING KONICA SENSOR... [ACTIVE]<br>
+            > VOLTAGE STABILITY: 99.8%<br>
+            > REPAIR MODE: HI-TECH CALIBRATION
         </div>
     </div>
-    <div id="canvas-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        let scene, camera, renderer, pcb, components = [];
+        let scene, camera, renderer, board, atoms = [];
 
         function init() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(50, 40, 50);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(60, 50, 80);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
 
-            // 1. Tạo bản mạch PCB (Green Glass)
-            const pcbGeom = new THREE.BoxGeometry(40, 1, 60);
-            const pcbMat = new THREE.MeshPhongMaterial({ 
-                color: 0x004411, 
-                transparent: true, 
-                opacity: 0.8,
-                shininess: 100
+            // 1. Tạo Mainboard PCB "Luxury"
+            const boardGeom = new THREE.BoxGeometry(50, 1.5, 70);
+            const boardMat = new THREE.MeshStandardMaterial({ 
+                color: 0x001111, 
+                metalness: 0.9, 
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.9
             });
-            pcb = new THREE.Mesh(pcbGeom, pcbMat);
-            scene.add(pcb);
+            board = new THREE.Mesh(boardGeom, boardMat);
+            scene.add(board);
 
-            // Vẽ các đường mạch (Trace) chạy trên PCB
-            const grid = new THREE.GridHelper(60, 20, 0x00f2ff, 0x002200);
-            grid.position.y = 0.6;
-            pcb.add(grid);
+            // Thêm các chip IC lớn cố định
+            const icGeom = new THREE.BoxGeometry(10, 2, 10);
+            const icMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 1 });
+            const mainChip = new THREE.Mesh(icGeom, icMat);
+            mainChip.position.y = 1.5;
+            board.add(mainChip);
 
-            // 2. Tạo linh kiện (Components) chạy nhảy
-            const compGeom = new THREE.BoxGeometry(2, 2, 2);
-            for (let i = 0; i < 40; i++) {
-                const compMat = new THREE.MeshPhongMaterial({ 
-                    color: i % 2 === 0 ? 0x00f2ff : 0xff00ff,
-                    emissive: i % 2 === 0 ? 0x004444 : 0x440044
+            // 2. Các hạt "Năng lượng" (Data Flow)
+            const pointsGeom = new THREE.BufferGeometry();
+            const count = 3000;
+            const positions = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i++) {
+                positions[i] = (Math.random() - 0.5) * 200;
+            }
+            pointsGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const pointsMat = new THREE.PointsMaterial({ size: 0.4, color: 0x00f2ff, transparent: true, blending: THREE.AdditiveBlending });
+            const starField = new THREE.Points(pointsGeom, pointsMat);
+            scene.add(starField);
+
+            // 3. Linh kiện bay kiểu Matrix
+            for(let i=0; i<30; i++) {
+                const geometry = new THREE.IcosahedronGeometry(Math.random() * 2, 0);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: 0x00f2ff, 
+                    emissive: 0x004444,
+                    wireframe: true 
                 });
-                const mesh = new THREE.Mesh(compGeom, compMat);
-                
-                // Vị trí đích (Target) trên mặt PCB
-                mesh.targetPos = new THREE.Vector3(
-                    (Math.random() - 0.5) * 35,
-                    1.5,
-                    (Math.random() - 0.5) * 55
-                );
-                
-                // Vị trí bay lơ lửng ban đầu
-                mesh.position.set(
-                    (Math.random() - 0.5) * 100,
-                    50 + Math.random() * 50,
-                    (Math.random() - 0.5) * 100
-                );
-                
-                scene.add(mesh);
-                components.push(mesh);
+                const part = new THREE.Mesh(geometry, material);
+                part.position.set((Math.random()-0.5)*100, (Math.random()*100), (Math.random()-0.5)*100);
+                part.velocity = Math.random() * 0.02 + 0.01;
+                scene.add(part);
+                atoms.push(part);
             }
 
-            // Ánh sáng
-            const light1 = new THREE.PointLight(0x00f2ff, 1, 500);
-            light1.position.set(50, 50, 50);
-            scene.add(light1);
-            scene.add(new THREE.AmbientLight(0x404040));
+            // Ánh sáng điểm nhấn
+            const blueLight = new THREE.PointLight(0x00f2ff, 2, 200);
+            blueLight.position.set(0, 20, 0);
+            scene.add(blueLight);
+            scene.add(new THREE.AmbientLight(0x222222));
         }
 
         function animate() {
             requestAnimationFrame(animate);
+            const t = Date.now() * 0.001;
 
-            const time = Date.now() * 0.001;
+            // Board xoay và nghiêng nghệ thuật
+            board.rotation.y = Math.sin(t * 0.5) * 0.2;
+            board.rotation.x = Math.cos(t * 0.3) * 0.1;
 
-            // Xoay PCB chầm chậm
-            pcb.rotation.y += 0.005;
-
-            // Cho linh kiện bay về vị trí mạch
-            components.forEach((c, index) => {
-                // Hiệu ứng bay lượn (Lerp)
-                c.position.x += (pcb.position.x + c.targetPos.x - c.position.x) * 0.02;
-                c.position.z += (pcb.position.z + c.targetPos.z - c.position.z) * 0.02;
-                
-                // Độ cao bay dập dềnh trước khi "hạ cánh"
-                const hoverHeight = c.targetPos.y + Math.sin(time + index) * 5;
-                c.position.y += (hoverHeight - c.position.y) * 0.02;
-                
-                c.rotation.x += 0.02;
-                c.rotation.y += 0.02;
+            // Linh kiện bay hội tụ
+            atoms.forEach((a, i) => {
+                a.position.y -= a.velocity * 5;
+                a.rotation.x += 0.01;
+                if(a.position.y < -20) a.position.y = 100;
             });
 
-            // Camera xoay quanh tâm
-            camera.lookAt(pcb.position);
-            
+            camera.lookAt(board.position);
             renderer.render(scene, camera);
         }
 

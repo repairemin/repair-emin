@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tiến Thắng Center - 3D Digital Circuit</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; color: #00f2ff; pointer-events: none;
+            text-shadow: 0 0 20px #00f2ff; z-index: 10;
+        }
+        h1 { font-size: 5rem; margin: 0; letter-spacing: 15px; font-weight: 900; }
+        p { font-size: 1.5rem; letter-spacing: 5px; opacity: 0.8; }
+        .hud {
+            position: absolute; bottom: 20px; width: 100%; text-align: center;
+            color: rgba(0, 242, 255, 0.5); font-size: 0.8rem; letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>TIẾN THẮNG CENTER</h1>
+        <p>REPAIR EXPERT | KONICA MINOLTA | TREK | METREL</p>
+    </div>
+    <div class="hud">SYSTEM STATUS: OPTIMIZED | 3D CIRCUIT RENDER ACTIVE</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, tunnel;
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Tạo hình trụ làm đường hầm mạch điện
+            const geometry = new THREE.CylinderGeometry(20, 20, 500, 32, 100, true);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x00f2ff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide
+            });
+            tunnel = new THREE.Mesh(geometry, material);
+            tunnel.rotation.x = Math.PI / 2;
+            scene.add(tunnel);
+
+            // Thêm các điểm sáng (hạt điện tử)
+            const particlesGeom = new THREE.BufferGeometry();
+            const particlesCount = 5000;
+            const posArray = new Float32Array(particlesCount * 3);
+            for(let i=0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 100;
+            }
+            particlesGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMat = new THREE.PointsMaterial({ size: 0.05, color: 0x00f2ff });
+            const particlesMesh = new THREE.Points(particlesGeom, particlesMat);
+            scene.add(particlesMesh);
+
+            camera.position.z = 30;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            tunnel.rotation.y += 0.002; // Mạch điện xoay chậm
+            tunnel.position.z += 0.5;   // Hiệu ứng bay xuyên qua
+            if (tunnel.position.z > 200) tunnel.position.z = 0;
+            
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        init();
+        animate();
+    </script>
+</body>
+</html>

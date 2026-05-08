@@ -3,192 +3,174 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Industrial SMPS 3D Render ⚡</title>
+<title>Electronic Megacity 3D ⚡</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#000; overflow:hidden; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
 canvas { display:block; }
-
 #overlay { position:fixed; inset:0; pointer-events:none; z-index:10; }
 #title { position:absolute; top:30px; left:50%; transform:translateX(-50%); text-align:center; }
-#title h1 { font-size:24px; font-weight:900; color:#00ffaa; letter-spacing:10px; text-shadow:0 0 15px #00ffaa; }
-#title p { font-size:10px; color:#00ffaa88; letter-spacing:5px; margin-top:5px; }
-
-#stats { position:absolute; bottom:30px; left:30px; font-size:11px; color:#00ffaa66; line-height:2; font-family: 'Courier New', monospace; }
-#legend { position:absolute; bottom:30px; right:30px; background:rgba(0,10,5,0.8); border:1px solid #00ffaa33; padding:15px; border-radius:4px; }
-.item { display:flex; align-items:center; gap:10px; font-size:10px; color:#88bbaa; margin-bottom:5px; }
-.dot { width:8px; height:8px; border-radius:1px; }
-
-#scanline { position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,170,0.02) 2px,rgba(0,255,170,0.02) 4px); }
+#title h1 { font-size:26px; font-weight:900; letter-spacing:12px; color:#00ffaa; text-shadow:0 0 20px #00ffaa; }
+#title p { font-size:10px; color:#00ffaa66; letter-spacing:6px; margin-top:8px; }
+#stats { position:absolute; bottom:30px; left:30px; font-size:11px; color:#00ffaa44; line-height:2.2; }
+#legend { position:absolute; bottom:30px; right:30px; background:rgba(0,10,5,0.9); border:1px solid #00ffaa22; padding:15px; border-radius:4px; }
+.li { display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:10px; color:#88bbaa; }
+.ld { width:10px; height:10px; border-radius:2px; }
 </style>
 </head>
 <body>
 
 <div id="overlay">
-  <div id="scanline"></div>
   <div id="title">
-    <h1>POWER STATION 3D</h1>
-    <p>INDUSTRIAL AC-DC CONVERTER LAYOUT</p>
-  </div>
-  <div id="stats">
-    PRIMARY: 230V AC ~ 50Hz<br>
-    SECONDARY: 24V DC / 10A<br>
-    EFFICIENCY: 92.4%<br>
-    STATUS: <span style="color:#00ffaa">STABLE</span>
+    <h1>MEGACITY PCB v2.0</h1>
+    <p>ADVANCED MULTI-BLOCK SYSTEM ARCHITECTURE</p>
   </div>
   <div id="legend">
-    <div class="item"><div class="dot" style="background:#eec20e"></div>EMI FILTER / X-CAP</div>
-    <div class="item"><div class="dot" style="background:#1a4466"></div>HV BULK CAPACITOR</div>
-    <div class="item"><div class="dot" style="background:#666"></div>HEATSINK / MOSFET</div>
-    <div class="item"><div class="dot" style="background:#ccaa00"></div>FLYBACK TRANSFORMER</div>
+    <div class="li"><div class="ld" style="background:#0044ff"></div>Micro-Controller (MCU)</div>
+    <div class="li"><div class="ld" style="background:#00ff88"></div>Ceramic Caps (Trees)</div>
+    <div class="li"><div class="ld" style="background:#ccaa00"></div>Power Inductors</div>
+    <div class="li"><div class="ld" style="background:#444"></div>Mosfet / IC Units</div>
+  </div>
+  <div id="stats">
+    CORE VOLTAGE: 1.2V DC<br>
+    SYSTEM TEMP: 32.4°C<br>
+    PROCESSING: 4.8 GHz<br>
+    STATUS: <span style="color:#00ffaa">HYPER-ACTIVE</span>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// --- CORE SETUP ---
+// --- INITIAL SETUP ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x010502);
-scene.fog = new THREE.FogExp2(0x010502, 0.008);
+scene.background = new THREE.Color(0x010805);
+scene.fog = new THREE.FogExp2(0x010805, 0.008);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 1500);
 const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
 // --- MATERIALS ---
-const mats = {
-    pcb: new THREE.MeshStandardMaterial({ color: 0x05220a, roughness: 0.9 }),
-    copper: new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.8, roughness: 0.2 }),
-    plastic: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6 }),
-    alum: new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.3 }),
-    yellowTape: new THREE.MeshStandardMaterial({ color: 0xddbb00, roughness: 0.4 }),
-    ledG: new THREE.MeshStandardMaterial({ color: 0x00ffaa, emissive: 0x00ffaa, emissiveIntensity: 2 })
+const M = {
+  pcb: new THREE.MeshStandardMaterial({ color: 0x05220a, roughness: 0.8 }),
+  copper: new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.8, roughness: 0.2 }),
+  mcu: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 }),
+  alum: new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.9, roughness: 0.2 }),
+  ceramic: new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.5 }), // Tụ gốm màu xanh lá
+  inductor: new THREE.MeshStandardMaterial({ color: 0x996600, metalness: 0.6 }),
+  solder: new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9 })
 };
 
 // --- COMPONENT FACTORY ---
-const box = (w,h,d,m,x=0,y=0,z=0) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
-    mesh.position.set(x, y + h/2, z);
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    return mesh;
+const box = (w,h,d,m,x,y,z) => {
+  const g = new THREE.BoxGeometry(w,h,d);
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.set(x, y + h/2, z);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
 };
 
-const cyl = (r,h,s,m,x=0,y=0,z=0,rx=0) => {
-    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s), m);
-    mesh.position.set(x, y + h/2, z);
-    mesh.rotation.x = rx;
-    mesh.castShadow = true; mesh.receiveShadow = true;
-    return mesh;
-};
-
-// 1. Tụ X (Tụ lọc nhiễu vuông màu vàng/xám)
-function createXCap(x, z) {
-    const g = new THREE.Group();
-    g.add(box(4, 3, 2, new THREE.MeshStandardMaterial({color:0xddaa00}), x, 0, z));
-    scene.add(g);
+// 1. Tụ gốm (Cây xanh điện tử)
+function addCeramicCap(x, z) {
+  const h = 1.5 + Math.random() * 2;
+  const cap = box(0.8, h, 0.8, M.ceramic, x, 0, z);
+  scene.add(cap);
 }
 
-// 2. Cuộn lọc EMI (Toroidal Choke)
-function createChoke(x, z) {
-    const g = new THREE.Group();
-    const torus = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.6, 16, 32), new THREE.MeshStandardMaterial({color:0x553311, metalness:0.5}));
-    torus.position.set(x, 2, z);
-    torus.rotation.x = Math.PI/2;
-    g.add(torus);
-    scene.add(g);
+// 2. Vi điều khiển (MCU)
+function addMCU(x, z, size) {
+  const g = new THREE.Group();
+  const chip = box(size, 1.2, size, M.mcu, x, 0, z);
+  g.add(chip);
+  // Các chân đồng quanh MCU
+  for(let i=0; i<8; i++) {
+    const pin = box(0.5, 0.2, 1, M.copper, x - size/2 - 0.5, 0, z - size/2 + (i*size/7));
+    g.add(pin);
+  }
+  scene.add(g);
 }
 
-// 3. Tụ lọc nguồn lớn (Bulk Cap)
-function createBigCap(x, z) {
-    const g = new THREE.Group();
-    g.add(cyl(2.5, 8, 24, new THREE.MeshStandardMaterial({color:0x1a2233}), x, 0, z));
-    // Vạch trắng âm cực
-    g.add(box(0.6, 7.8, 0.1, new THREE.MeshStandardMaterial({color:0xeeeeee}), x, 0.1, z + 2.45));
-    scene.add(g);
+// 3. Khối Tản nhiệt & Mosfet (Control Block)
+function addMosfetBlock(x, z) {
+  const base = box(6, 0.5, 4, M.alum, x, 0, z);
+  for(let i=0; i<5; i++) {
+    const fin = box(0.1, 3, 4, M.alum, x - 2.5 + i*1.2, 0, z);
+    scene.add(fin);
+  }
+  scene.add(base);
 }
 
-// 4. Heatsink với MOSFET
-function createHeatsink(x, z, size=4) {
-    const g = new THREE.Group();
-    const base = box(size, 0.5, 6, mats.alum, x, 0, z);
-    g.add(base);
-    for(let i=0; i<6; i++) {
-        g.add(box(0.2, 4, 6, mats.alum, x - (size/2) + i*(size/5), 0, z));
-    }
-    // MOSFET gắn vào tản nhiệt
-    g.add(box(1, 1.8, 0.5, mats.plastic, x-0.5, 1, z));
-    scene.add(g);
+// 4. Cuộn cảm công suất (Power Inductor)
+function addInductor(x, z) {
+  const body = box(4, 3.5, 4, M.inductor, x, 0, z);
+  const top = box(3.5, 0.2, 3.5, M.mcu, x, 3.5, z);
+  scene.add(body, top);
 }
 
-// 5. Biến áp EE (Transformer)
-function createTrans(x, z) {
-    const g = new THREE.Group();
-    g.add(box(8, 7, 7, mats.plastic, x, 0, z)); // Lõi Ferrite
-    g.add(box(8.2, 5, 6, mats.yellowTape, x, 1, z)); // Băng keo vàng
-    scene.add(g);
+// --- XÂY DỰNG PCB HÌNH VUÔNG RỘNG ---
+const boardSize = 120;
+const mainBoard = box(boardSize, 1.5, boardSize, M.pcb, 0, -1.5, 0);
+scene.add(mainBoard);
+
+// THIẾT KẾ CÁC KHỐI CHỨC NĂNG
+// 1. Khối Nguồn (Power Block) - Góc trái
+for(let i=0; i<3; i++) addInductor(-40 + (i*10), -40);
+for(let i=0; i<15; i++) addCeramicCap(-50 + Math.random()*20, -30 + Math.random()*20);
+
+// 2. Khối Vi điều khiển trung tâm (Core Block)
+addMCU(0, 0, 12); // MCU Chính
+for(let i=0; i<40; i++) {
+    const ang = (i/40) * Math.PI * 2;
+    const r = 18 + Math.random()*5;
+    addCeramicCap(Math.cos(ang)*r, Math.sin(ang)*r); // Rừng tụ quanh MCU
 }
 
-// --- PCB CONSTRUCTION ---
-const boardW = 100, boardH = 60;
-scene.add(box(boardW, 1, boardH, mats.pcb, 0, -1, 0));
+// 3. Khối Điều khiển (Control Block) - Góc phải
+addMosfetBlock(40, 40);
+addMosfetBlock(40, 25);
+for(let i=0; i<20; i++) addCeramicCap(30 + Math.random()*20, 20 + Math.random()*30);
 
-// BỐ TRÍ DÀY ĐẶC (DENSE LAYOUT)
-// Khu vực AC Input (Trái)
-createXCap(-40, -20);
-createChoke(-35, -10);
-createXCap(-30, -20);
-createChoke(-25, -10);
-// Bridge Rectifier (Cầu Diode)
-scene.add(box(2, 3, 4, mats.plastic, -20, 0, 5));
+// 4. Khối Giao tiếp (I/O Block)
+for(let i=0; i<5; i++) addMCU(-40, 30 - (i*15), 4);
 
-// Khu vực cao áp (Giữa trái)
-createBigCap(-10, 15);
-createBigCap(-10, 5);
-createHeatsink(-10, -15, 5); // Tản nhiệt cho Bridge
-
-// Khối công suất chính (Trung tâm)
-createHeatsink(5, 15, 6); // Tản nhiệt MOSFET nguồn
-createTrans(20, 0);
-
-// Khối đầu ra DC (Phải)
-createHeatsink(35, 15, 8); // Tản nhiệt Diode Schottky đầu ra
-for(let i=0; i<4; i++) {
-    const r = 1.8, h = 5;
-    scene.add(cyl(r, h, 16, new THREE.MeshStandardMaterial({color:0x004422}), 35 + (i*4), 0, -5));
+// ĐƯỜNG MẠCH ĐỒNG (TRACES)
+for(let i=0; i<15; i++) {
+  const w = 0.5 + Math.random();
+  const trace = box(boardSize, 0.1, w, M.copper, 0, -0.1, -boardSize/2 + Math.random()*boardSize);
+  scene.add(trace);
 }
-// Cuộn cảm lọc đầu ra
-createChoke(45, 10);
-// LED báo
-scene.add(cyl(0.4, 0.6, 12, mats.ledG, 48, 0, 25));
 
-// --- LIGHTING ---
-const ambient = new THREE.AmbientLight(0xffffff, 0.3); scene.add(ambient);
-const spot1 = new THREE.PointLight(0x00ffaa, 1.5, 100); spot1.position.set(0, 30, 0); scene.add(spot1);
-const spot2 = new THREE.DirectionalLight(0xffffff, 0.6); spot2.position.set(50, 50, 50); scene.add(spot2);
+// --- ÁNH SÁNG ---
+const amb = new THREE.AmbientLight(0xffffff, 0.2); scene.add(amb);
+const sun = new THREE.PointLight(0x00ffaa, 1.5, 200); sun.position.set(0, 50, 0); scene.add(sun);
+const moon = new THREE.DirectionalLight(0x0044ff, 0.5); moon.position.set(-50, 50, -50); scene.add(moon);
 
-// --- DRONE CAMERA PATH ---
-let t = 0;
+// --- CAMERA CHUYỂN ĐỘNG QUAY TRÊN ĐẦU (FLY-OVER) ---
+let time = 0;
 function animate() {
-    requestAnimationFrame(animate);
-    t += 0.002;
-    
-    // Camera bay lượn vòng quanh và lướt trên đầu linh kiện
-    camera.position.x = Math.sin(t) * 60;
-    camera.position.z = Math.cos(t * 0.7) * 40;
-    camera.position.y = 25 + Math.sin(t * 0.5) * 10;
-    
-    camera.lookAt(Math.sin(t*1.2)*10, 0, Math.cos(t)*10);
-    
-    renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+  time += 0.0015;
+
+  // Camera bay lướt như flycam qua các khối linh kiện
+  camera.position.x = Math.sin(time) * 80;
+  camera.position.z = Math.cos(time * 0.8) * 80;
+  camera.position.y = 45 + Math.sin(time * 0.5) * 15;
+  
+  camera.lookAt(Math.sin(time*2)*10, 0, Math.cos(time*2)*10);
+  
+  // Hiệu ứng nhấp nháy cho tụ gốm
+  M.ceramic.emissiveIntensity = 0.5 + Math.sin(time * 10) * 0.3;
+
+  renderer.render(scene, camera);
 }
 
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
 });
 
 animate();

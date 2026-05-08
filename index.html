@@ -3,174 +3,204 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Electronic Megacity 3D ⚡</title>
+<title>Ultra-Realistic PCB City ⚡</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
-canvas { display:block; }
-#overlay { position:fixed; inset:0; pointer-events:none; z-index:10; }
-#title { position:absolute; top:30px; left:50%; transform:translateX(-50%); text-align:center; }
-#title h1 { font-size:26px; font-weight:900; letter-spacing:12px; color:#00ffaa; text-shadow:0 0 20px #00ffaa; }
-#title p { font-size:10px; color:#00ffaa66; letter-spacing:6px; margin-top:8px; }
-#stats { position:absolute; bottom:30px; left:30px; font-size:11px; color:#00ffaa44; line-height:2.2; }
-#legend { position:absolute; bottom:30px; right:30px; background:rgba(0,10,5,0.9); border:1px solid #00ffaa22; padding:15px; border-radius:4px; }
-.li { display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:10px; color:#88bbaa; }
-.ld { width:10px; height:10px; border-radius:2px; }
+body { background:#050505; overflow:hidden; font-family:'Segoe UI', sans-serif; }
+#overlay { position:fixed; inset:0; pointer-events:none; z-index:10; background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.4) 100%); }
+#hud { position:absolute; top:30px; left:30px; color:#00ffaa; text-shadow:0 0 10px #00ffaa; font-family:monospace; font-size:12px; line-height:1.6; }
+#title { position:absolute; top:30px; right:30px; text-align:right; color:#00ffaa; }
+#title h1 { font-size:22px; letter-spacing:8px; font-weight:900; }
+#loading { position:fixed; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100; color:#00ffaa; transition: 1s; }
+.bar { width:200px; height:2px; background:#111; margin-top:10px; position:relative; overflow:hidden; }
+.fill { position:absolute; height:100%; background:#00ffaa; width:0%; transition: 0.2s; }
 </style>
 </head>
 <body>
 
+<div id="loading">
+  <div style="letter-spacing:10px">INITIALIZING PCB GEN 4</div>
+  <div class="bar"><div class="fill" id="lp"></div></div>
+</div>
+
 <div id="overlay">
+  <div id="hud">
+    > SYSTEM: READY<br>
+    > VOLTAGE: 12.02V<br>
+    > TEMP: 38.6°C<br>
+    > SCANNING COMPONENTS...
+  </div>
   <div id="title">
-    <h1>MEGACITY PCB v2.0</h1>
-    <p>ADVANCED MULTI-BLOCK SYSTEM ARCHITECTURE</p>
-  </div>
-  <div id="legend">
-    <div class="li"><div class="ld" style="background:#0044ff"></div>Micro-Controller (MCU)</div>
-    <div class="li"><div class="ld" style="background:#00ff88"></div>Ceramic Caps (Trees)</div>
-    <div class="li"><div class="ld" style="background:#ccaa00"></div>Power Inductors</div>
-    <div class="li"><div class="ld" style="background:#444"></div>Mosfet / IC Units</div>
-  </div>
-  <div id="stats">
-    CORE VOLTAGE: 1.2V DC<br>
-    SYSTEM TEMP: 32.4°C<br>
-    PROCESSING: 4.8 GHz<br>
-    STATUS: <span style="color:#00ffaa">HYPER-ACTIVE</span>
+    <h1>ADVANCED MOTHERBOARD</h1>
+    <p style="font-size:10px;opacity:0.6">MULTI-LAYER ARCHITECTURE | HIGH-DENSITY SMPS</p>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// --- INITIAL SETUP ---
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x010805);
-scene.fog = new THREE.FogExp2(0x010805, 0.008);
+// --- CONFIG & LOADING ---
+const lp = document.getElementById('lp');
+let progress = 0;
+const loader = setInterval(() => {
+  progress += 5; lp.style.width = progress + '%';
+  if(progress >= 100) {
+    clearInterval(loader);
+    document.getElementById('loading').style.opacity = '0';
+    setTimeout(() => document.getElementById('loading').remove(), 1000);
+  }
+}, 50);
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 1500);
-const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+// --- SCENE SETUP ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020503);
+scene.fog = new THREE.FogExp2(0x020503, 0.006);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 2000);
+const renderer = new THREE.WebGLRenderer({ antialias:true, logarithmicDepthBuffer: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// --- MATERIALS ---
+// --- MATERIALS (REALISTIC) ---
 const M = {
-  pcb: new THREE.MeshStandardMaterial({ color: 0x05220a, roughness: 0.8 }),
-  copper: new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.8, roughness: 0.2 }),
-  mcu: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 }),
-  alum: new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.9, roughness: 0.2 }),
-  ceramic: new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.5 }), // Tụ gốm màu xanh lá
-  inductor: new THREE.MeshStandardMaterial({ color: 0x996600, metalness: 0.6 }),
-  solder: new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9 })
+  pcb: new THREE.MeshStandardMaterial({ color: 0x0a3312, roughness: 0.4, metalness: 0.2 }),
+  copper: new THREE.MeshStandardMaterial({ color: 0xb8860b, metalness: 0.9, roughness: 0.1 }),
+  icBody: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.7 }),
+  metal: new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 1, roughness: 0.2 }),
+  ceramic: new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.4 }),
+  solder: new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 }),
+  inductor: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 })
 };
 
-// --- COMPONENT FACTORY ---
-const box = (w,h,d,m,x,y,z) => {
-  const g = new THREE.BoxGeometry(w,h,d);
-  const mesh = new THREE.Mesh(g, m);
+// --- COMPONENT BUILDERS ---
+const box = (w,h,d,m,x,z,y=0) => {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m);
   mesh.position.set(x, y + h/2, z);
-  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.castShadow = mesh.receiveShadow = true;
   return mesh;
 };
 
-// 1. Tụ gốm (Cây xanh điện tử)
-function addCeramicCap(x, z) {
-  const h = 1.5 + Math.random() * 2;
-  const cap = box(0.8, h, 0.8, M.ceramic, x, 0, z);
-  scene.add(cap);
+// Tụ gốm (Cây xanh điện tử) - Nâng cấp thành khối trụ thuôn
+function addCeramic(x, z, h=2) {
+  const g = new THREE.Group();
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, h, 12), M.ceramic);
+  cap.position.set(x, h/2, z);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 1.4), M.solder);
+  base.position.set(x, 0.1, z);
+  g.add(cap, base);
+  scene.add(g);
 }
 
-// 2. Vi điều khiển (MCU)
-function addMCU(x, z, size) {
+// Chip IC chân rết (MCU/Controller)
+function addIC(x, z, s, pins=8) {
   const g = new THREE.Group();
-  const chip = box(size, 1.2, size, M.mcu, x, 0, z);
-  g.add(chip);
-  // Các chân đồng quanh MCU
-  for(let i=0; i<8; i++) {
-    const pin = box(0.5, 0.2, 1, M.copper, x - size/2 - 0.5, 0, z - size/2 + (i*size/7));
-    g.add(pin);
+  g.add(box(s, 1, s, M.icBody, x, z));
+  // Chân rết kim loại
+  for(let i=0; i<pins; i++) {
+    const pX = x - s/2 - 0.4;
+    const pZ = z - s/2 + (i * s/(pins-1));
+    g.add(box(0.8, 0.1, 0.3, M.metal, pX, pZ, 0.1));
+    g.add(box(0.8, 0.1, 0.3, M.metal, x + s/2 + 0.4, pZ, 0.1));
   }
   scene.add(g);
 }
 
-// 3. Khối Tản nhiệt & Mosfet (Control Block)
-function addMosfetBlock(x, z) {
-  const base = box(6, 0.5, 4, M.alum, x, 0, z);
-  for(let i=0; i<5; i++) {
-    const fin = box(0.1, 3, 4, M.alum, x - 2.5 + i*1.2, 0, z);
-    scene.add(fin);
+// Tản nhiệt lá (Heatsink)
+function addHeatsink(x, z) {
+  const base = box(8, 0.5, 6, M.metal, x, z);
+  for(let i=0; i<10; i++) {
+    scene.add(box(0.1, 4, 6, M.metal, x - 3.5 + i*0.8, z));
   }
   scene.add(base);
 }
 
-// 4. Cuộn cảm công suất (Power Inductor)
+// Cuộn cảm dán (Power Inductor)
 function addInductor(x, z) {
-  const body = box(4, 3.5, 4, M.inductor, x, 0, z);
-  const top = box(3.5, 0.2, 3.5, M.mcu, x, 3.5, z);
-  scene.add(body, top);
+  const body = box(4, 3, 4, M.inductor, x, z);
+  const core = box(3.8, 0.1, 3.8, M.metal, x, z, 3);
+  scene.add(body, core);
 }
 
-// --- XÂY DỰNG PCB HÌNH VUÔNG RỘNG ---
-const boardSize = 120;
-const mainBoard = box(boardSize, 1.5, boardSize, M.pcb, 0, -1.5, 0);
-scene.add(mainBoard);
+// --- PCB CONSTRUCTION (VUÔNG RỘNG) ---
+const size = 150;
+const board = box(size, 2, size, M.pcb, 0, 0, -2);
+scene.add(board);
 
-// THIẾT KẾ CÁC KHỐI CHỨC NĂNG
-// 1. Khối Nguồn (Power Block) - Góc trái
-for(let i=0; i<3; i++) addInductor(-40 + (i*10), -40);
-for(let i=0; i<15; i++) addCeramicCap(-50 + Math.random()*20, -30 + Math.random()*20);
-
-// 2. Khối Vi điều khiển trung tâm (Core Block)
-addMCU(0, 0, 12); // MCU Chính
-for(let i=0; i<40; i++) {
-    const ang = (i/40) * Math.PI * 2;
-    const r = 18 + Math.random()*5;
-    addCeramicCap(Math.cos(ang)*r, Math.sin(ang)*r); // Rừng tụ quanh MCU
-}
-
-// 3. Khối Điều khiển (Control Block) - Góc phải
-addMosfetBlock(40, 40);
-addMosfetBlock(40, 25);
-for(let i=0; i<20; i++) addCeramicCap(30 + Math.random()*20, 20 + Math.random()*30);
-
-// 4. Khối Giao tiếp (I/O Block)
-for(let i=0; i<5; i++) addMCU(-40, 30 - (i*15), 4);
-
-// ĐƯỜNG MẠCH ĐỒNG (TRACES)
-for(let i=0; i<15; i++) {
-  const w = 0.5 + Math.random();
-  const trace = box(boardSize, 0.1, w, M.copper, 0, -0.1, -boardSize/2 + Math.random()*boardSize);
+// Vẽ đường mạch đồng chằng chịt (Copper Traces)
+for(let i=0; i<100; i++) {
+  const isVert = Math.random() > 0.5;
+  const w = isVert ? 0.2 : (20 + Math.random()*80);
+  const d = isVert ? (20 + Math.random()*80) : 0.2;
+  const trace = box(w, 0.05, d, M.copper, (Math.random()-0.5)*size, (Math.random()-0.5)*size, 0.01);
   scene.add(trace);
 }
 
-// --- ÁNH SÁNG ---
-const amb = new THREE.AmbientLight(0xffffff, 0.2); scene.add(amb);
-const sun = new THREE.PointLight(0x00ffaa, 1.5, 200); sun.position.set(0, 50, 0); scene.add(sun);
-const moon = new THREE.DirectionalLight(0x0044ff, 0.5); moon.position.set(-50, 50, -50); scene.add(moon);
+// PHÂN KHỐI CÔNG NGHỆ CAO
+// 1. Khối Nguồn (Power Zone)
+for(let i=0; i<4; i++) addInductor(-50, -50 + i*10);
+addHeatsink(-35, -50);
+for(let i=0; i<30; i++) addCeramic(-65 + Math.random()*25, -65 + Math.random()*30, 1 + Math.random()*3);
 
-// --- CAMERA CHUYỂN ĐỘNG QUAY TRÊN ĐẦU (FLY-OVER) ---
+// 2. Khối Vi xử lý (Logic Zone) - Trung tâm
+addIC(0, 0, 15, 12); // Main MCU
+addIC(20, 0, 6, 6);  // Co-Processor
+for(let i=0; i<50; i++) {
+  const r = 20 + Math.random()*15;
+  const a = Math.random() * Math.PI * 2;
+  addCeramic(Math.cos(a)*r, Math.sin(a)*r, 0.5 + Math.random()*2);
+}
+
+// 3. Khối Giao tiếp & Điều khiển (I/O Zone)
+for(let i=0; i<6; i++) addIC(50, -40 + i*15, 5, 4);
+addHeatsink(50, 50);
+for(let i=0; i<40; i++) addCeramic(40 + Math.random()*25, -60 + Math.random()*100, 1.5);
+
+// --- LIGHTING (CINEMATIC) ---
+const amb = new THREE.AmbientLight(0xffffff, 0.2);
+scene.add(amb);
+
+const blueLight = new THREE.PointLight(0x0044ff, 2, 150);
+blueLight.position.set(-50, 40, -50);
+scene.add(blueLight);
+
+const greenLight = new THREE.PointLight(0x00ffaa, 1.5, 150);
+greenLight.position.set(50, 30, 50);
+scene.add(greenLight);
+
+const mainSun = new THREE.DirectionalLight(0xffffff, 0.5);
+mainSun.position.set(20, 100, 20);
+mainSun.castShadow = true;
+scene.add(mainSun);
+
+// --- ANIMATION & CAMERA (SUPER DRONE VIEW) ---
+camera.position.set(100, 80, 100);
 let time = 0;
+
 function animate() {
   requestAnimationFrame(animate);
-  time += 0.0015;
+  time += 0.0012;
 
-  // Camera bay lướt như flycam qua các khối linh kiện
-  camera.position.x = Math.sin(time) * 80;
-  camera.position.z = Math.cos(time * 0.8) * 80;
-  camera.position.y = 45 + Math.sin(time * 0.5) * 15;
+  // Drone bay lướt sát mặt linh kiện để thấy độ chi tiết
+  camera.position.x = Math.cos(time) * 90;
+  camera.position.z = Math.sin(time * 0.7) * 90;
+  camera.position.y = 40 + Math.sin(time * 0.5) * 25;
   
-  camera.lookAt(Math.sin(time*2)*10, 0, Math.cos(time*2)*10);
-  
-  // Hiệu ứng nhấp nháy cho tụ gốm
-  M.ceramic.emissiveIntensity = 0.5 + Math.sin(time * 10) * 0.3;
+  // Điểm nhìn (LookAt) di chuyển theo các khối linh kiện
+  const targetX = Math.sin(time * 1.5) * 20;
+  const targetZ = Math.cos(time) * 20;
+  camera.lookAt(targetX, 0, targetZ);
 
+  // Hiệu ứng "nhịp thở" của mạch điện
+  M.ceramic.emissiveIntensity = 0.3 + Math.sin(time * 8) * 0.2;
+  
   renderer.render(scene, camera);
 }
 
 window.addEventListener('resize', () => {
-  camera.aspect = innerWidth/innerHeight;
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 animate();

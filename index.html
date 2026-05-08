@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Component City V2 - Pro</title>
+    <title>Bright Hardware City - Sunlight Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000205; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #e0f7fa; font-family: 'Segoe UI', sans-serif; }
         #ui {
-            position: absolute; top: 5%; left: 5%; color: #00f2fe;
-            pointer-events: none; text-transform: uppercase; letter-spacing: 2px;
+            position: absolute; top: 30px; left: 30px; color: #006064;
+            pointer-events: none; z-index: 10;
         }
         canvas { display: block; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h2 style="margin:0; font-size: 1.5rem;">Hardware City OS</h2>
-        <p style="color: #fff; font-size: 0.8rem; opacity: 0.7;">System Status: Online</p>
+        <h1 style="margin:0; font-size: 2.5rem; font-weight: 900;">ECO-TECH CITY</h1>
+        <p style="font-size: 1rem; font-weight: 600;">Sáng tạo từ những đường mạch tinh khôi</p>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -26,10 +26,12 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000205, 0.08);
+            // Màu nền xanh nhạt như bầu trời buổi sáng
+            scene.background = new THREE.Color(0xd0ebff);
+            scene.fog = new THREE.Fog(0xd0ebff, 10, 60);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(15, 10, 15);
+            camera.position.set(20, 15, 20);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -40,121 +42,97 @@
             scene.add(cityGroup);
             clock = new THREE.Clock();
 
-            // --- NỀN MẠCH TRACES ---
-            const grid = new THREE.GridHelper(100, 50, 0x004444, 0x002222);
-            scene.add(grid);
+            // --- ÁNH SÁNG MẶT TRỜI (SUNLIGHT) ---
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xfff5d7, 1.2);
+            sunLight.position.set(50, 100, 50);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            // Nền mạch in (Board trắng bạc)
+            const boardGeo = new THREE.PlaneGeometry(100, 100);
+            const boardMat = new THREE.MeshPhongMaterial({ color: 0xf0f0f0 });
+            const board = new THREE.Mesh(boardGeo, boardMat);
+            board.rotation.x = -Math.PI / 2;
+            scene.add(board);
+
+            // --- VẼ ĐƯỜNG MẠCH (TRACES) CHẠY GIỮA CÁC VÙNG ---
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x00acc1, transparent: true, opacity: 0.4 });
+            for(let i=0; i<80; i++) {
+                const points = [];
+                let currX = THREE.MathUtils.randFloatSpread(40);
+                let currZ = THREE.MathUtils.randFloatSpread(40);
+                for(let j=0; j<3; j++) {
+                    points.push(new THREE.Vector3(currX, 0.05, currZ));
+                    currX += THREE.MathUtils.randFloatSpread(10);
+                    currZ += THREE.MathUtils.randFloatSpread(10);
+                }
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(lineGeo, lineMat);
+                scene.add(line);
+            }
 
             // --- HÀM TẠO LINH KIỆN ---
 
-            // 1. CHIP / CPU
+            // 1. CPU (Tòa nhà chính)
             function createCPU(x, z) {
                 const group = new THREE.Group();
-                // Thân chip
-                const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(2, 0.4, 2),
-                    new THREE.MeshPhongMaterial({ color: 0x111111 })
-                );
-                // Mặt trên (Heat spreader)
-                const top = new THREE.Mesh(
-                    new THREE.BoxGeometry(1.4, 0.1, 1.4),
-                    new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 1, roughness: 0.2 })
-                );
-                top.position.y = 0.25;
-                group.add(body, top);
-                
-                // Chân chip (Pin)
-                const pinGeo = new THREE.BoxGeometry(0.1, 0.2, 0.1);
-                const pinMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
-                for(let i=-1; i<=1; i+=0.4) {
-                    for(let j=-1; j<=1; j+=2) {
-                        const p1 = new THREE.Mesh(pinGeo, pinMat);
-                        p1.position.set(i, -0.2, j);
-                        const p2 = new THREE.Mesh(pinGeo, pinMat);
-                        p2.position.set(j, -0.2, i);
-                        group.add(p1, p2);
-                    }
-                }
-                group.position.set(x, 0.2, z);
+                const body = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), new THREE.MeshPhongMaterial({color: 0x333333}));
+                const cap = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 2), new THREE.MeshStandardMaterial({color: 0xdddddd, metalness: 1}));
+                cap.position.y = 0.3;
+                group.add(body, cap);
+                group.position.set(x, 0.25, z);
                 cityGroup.add(group);
             }
 
-            // 2. TỤ ĐIỆN (Capacitor)
-            function createCapacitor(x, z) {
+            // 2. TỤ GỐM (Cây xanh)
+            function createCeramicCap(x, z) {
                 const group = new THREE.Group();
+                // Thân tụ hình tròn dẹt
                 const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16),
-                    new THREE.MeshPhongMaterial({ color: 0x003366 })
+                    new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16),
+                    new THREE.MeshPhongMaterial({ color: 0x4caf50 }) // Màu xanh lá cây
                 );
-                const stripe = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.1, 1.21, 0.4),
-                    new THREE.MeshBasicMaterial({ color: 0xcccccc })
-                );
-                stripe.position.x = 0.35;
-                group.add(body, stripe);
-                group.position.set(x, 0.6, z);
-                cityGroup.add(group);
-            }
-
-            // 3. ĐIỆN TRỞ (Resistor)
-            function createResistor(x, z) {
-                const group = new THREE.Group();
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.2, 0.2, 1, 12),
-                    new THREE.MeshPhongMaterial({ color: 0xccaa88 })
-                );
-                body.rotation.z = Math.PI/2;
-                group.add(body);
-                // Vòng màu
-                [0.2, 0, -0.2].forEach((pos, i) => {
-                    const ring = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.21, 0.21, 0.1, 12),
-                        new THREE.MeshBasicMaterial({ color: i==0?0xff0000:0x00ff00 })
-                    );
-                    ring.rotation.z = Math.PI/2;
-                    ring.position.x = pos;
-                    group.add(ring);
-                });
-                group.position.set(x, 0.2, z);
-                cityGroup.add(group);
-            }
-
-            // 4. TRANSISTOR
-            function createTransistor(x, z) {
-                const group = new THREE.Group();
-                const body = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.6, 0.8, 0.3),
-                    new THREE.MeshPhongMaterial({ color: 0x222222 })
-                );
-                for(let i=-0.2; i<=0.2; i+=0.2) {
-                    const leg = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.05, 0.5, 0.05),
-                        new THREE.MeshBasicMaterial({ color: 0xaaaaaa })
-                    );
-                    leg.position.set(i, -0.6, 0);
-                    group.add(leg);
-                }
+                body.rotation.x = Math.PI/2;
+                // Chân tụ như thân cây
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6), new THREE.MeshPhongMaterial({color: 0x999999}));
+                leg.position.y = -0.3;
+                group.add(body, leg);
                 group.position.set(x, 0.8, z);
                 cityGroup.add(group);
             }
 
-            // --- RẢI LINH KIỆN LÊN BOARD ---
-            for (let i = 0; i < 60; i++) {
-                const x = THREE.MathUtils.randFloatSpread(40);
-                const z = THREE.MathUtils.randFloatSpread(40);
-                const type = Math.floor(Math.random() * 4);
-                
-                if(type === 0) createCPU(x, z);
-                else if(type === 1) createCapacitor(x, z);
-                else if(type === 2) createResistor(x, z);
-                else createTransistor(x, z);
+            // 3. TỤ HÓA (Tòa nhà trụ)
+            function createCap(x, z) {
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.5, 0.5, 2, 16),
+                    new THREE.MeshPhongMaterial({ color: 0x00838f })
+                );
+                body.position.set(x, 1, z);
+                cityGroup.add(body);
             }
 
-            // Ánh sáng
-            const ambient = new THREE.AmbientLight(0x404040, 2);
-            scene.add(ambient);
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(10, 20, 10);
-            scene.add(sun);
+            // 4. ĐIỆN TRỞ (Resistor)
+            function createResistor(x, z) {
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.2), new THREE.MeshPhongMaterial({color: 0xd7ccc8}));
+                body.rotation.z = Math.PI/2;
+                body.position.set(x, 0.2, z);
+                cityGroup.add(body);
+            }
+
+            // RẢI LINH KIỆN (Tăng số lượng lên 150)
+            for (let i = 0; i < 150; i++) {
+                const x = THREE.MathUtils.randFloatSpread(50);
+                const z = THREE.MathUtils.randFloatSpread(50);
+                const type = Math.random();
+                
+                if(type > 0.95) createCPU(x, z);
+                else if(type > 0.7) createCeramicCap(x, z); // Tụ gốm xanh lá chiếm 25%
+                else if(type > 0.4) createResistor(x, z);
+                else createCap(x, z);
+            }
 
             window.addEventListener('resize', onWindowResize);
         }
@@ -169,14 +147,17 @@
             requestAnimationFrame(animate);
             const t = clock.getElapsedTime();
 
-            // Camera bay lượn chậm
-            camera.position.x = Math.cos(t * 0.1) * 20;
-            camera.position.z = Math.sin(t * 0.1) * 20;
+            // Camera bay lượn nhẹ nhàng như chim bay trên thành phố
+            camera.position.x = Math.sin(t * 0.15) * 25;
+            camera.position.z = Math.cos(t * 0.15) * 25;
+            camera.position.y = 15 + Math.sin(t * 0.3) * 3;
             camera.lookAt(0, 0, 0);
 
-            // Hiệu ứng các linh kiện hơi rung động hoặc phát sáng
+            // Hiệu ứng các "cây tụ gốm" đung đưa nhẹ trong gió
             cityGroup.children.forEach((obj, i) => {
-                obj.position.y += Math.sin(t + i) * 0.002;
+                if(obj.children.length > 0 && obj.children[0].material.color.g > 0.5) { // Kiểm tra nếu là tụ xanh
+                    obj.rotation.z = Math.sin(t + i) * 0.1;
+                }
             });
 
             renderer.render(scene, camera);

@@ -3,129 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hardware City OS - 3D PCB</title>
+    <title>Electronic City 3D Banner</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
-        
-        /* UI Overlay giống hình mẫu */
-        .ui-overlay {
+        .overlay {
             position: absolute;
-            top: 40px;
-            left: 40px;
-            z-index: 100;
-            color: #00f2ff;
-            text-shadow: 0 0 10px rgba(0, 242, 255, 0.7);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ffcc;
+            text-align: center;
             pointer-events: none;
+            text-shadow: 0 0 10px #00ffcc;
         }
-        .ui-overlay h1 { margin: 0; font-size: 28px; letter-spacing: 4px; }
-        .ui-overlay p { margin: 5px 0; font-size: 14px; opacity: 0.8; }
+        h1 { font-size: 3rem; letter-spacing: 5px; margin: 0; }
+        p { color: #555; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <div class="ui-overlay">
-        <h1>HARDWARE CITY OS</h1>
-        <p>SYSTEM STATUS: ONLINE</p>
+    <div class="overlay">
+        <h1>TIẾN THẮNG CENTER</h1>
+        <p>Electronic Component City - 3D Simulation</p>
     </div>
+
     <div id="canvas-container"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+    <!-- Tải thư viện Three.js -->
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+          }
+        }
+    </script>
 
-    <script>
-        let scene, camera, renderer, pcbGroup;
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        function init() {
-            scene = new THREE.Scene();
+        // --- CẤU HÌNH CƠ BẢN ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020202);
+        scene.fog = new THREE.FogExp2(0x020202, 0.05);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(10, 5, 10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- ÁNH SÁNG ---
+        const ambientLight = new THREE.AmbientLight(0x404040, 2); 
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0x00ffcc, 2, 50);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // --- TẠO THÀNH PHỐ LINH KIỆN ---
+        const cityGroup = new THREE.Group();
+
+        // Hàm tạo "Tòa nhà" linh kiện
+        function createComponent(x, z, h, color) {
+            const geometry = new THREE.BoxGeometry(1, h, 1);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.2,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, h/2, z);
             
-            // Camera góc rộng để thấy độ hoành tráng
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(15, 12, 15);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            // Nhóm chứa toàn bộ linh kiện PCB
-            pcbGroup = new THREE.Group();
-            scene.add(pcbGroup);
-
-            // 1. Tạo mặt nền PCB lưới (Grid)
-            const gridSize = 40;
-            const divisions = 40;
-            const gridHelper = new THREE.GridHelper(gridSize, divisions, 0x004444, 0x002222);
-            pcbGroup.add(gridHelper);
-
-            // 2. Hàm tạo Chip/Linh kiện
-            const createComponent = (w, h, d, x, z, color = 0x111111) => {
-                const geo = new THREE.BoxGeometry(w, h, d);
-                const mat = new THREE.MeshPhongMaterial({ color: color });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(x, h/2, z);
-                pcbGroup.add(mesh);
-
-                // Thêm viền sáng cho chip
-                const edges = new THREE.EdgesGeometry(geo);
-                const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x00f2ff }));
-                line.position.copy(mesh.position);
-                pcbGroup.add(line);
-            };
-
-            // Tạo các Chip ngẫu nhiên trên mặt sàn
-            for(let i=0; i<30; i++) {
-                const x = (Math.random() - 0.5) * 30;
-                const z = (Math.random() - 0.5) * 30;
-                const size = Math.random() * 2 + 0.5;
-                createComponent(size, Math.random()*0.5 + 0.2, size, x, z);
-            }
-
-            // 3. Hiệu ứng đường dẫn mạch (Line Glow)
-            for(let i=0; i<20; i++) {
-                const points = [];
-                let currX = (Math.random()-0.5)*30;
-                let currZ = (Math.random()-0.5)*30;
-                for(let j=0; j<5; j++) {
-                    points.push(new THREE.Vector3(currX, 0.05, currZ));
-                    if(Math.random() > 0.5) currX += 2; else currZ += 2;
-                }
-                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-                const lineMat = new THREE.LineBasicMaterial({ color: 0x00f2ff, transparent: true, opacity: 0.5 });
-                const polyline = new THREE.Line(lineGeo, lineMat);
-                pcbGroup.add(polyline);
-            }
-
-            // 4. Ánh sáng
-            const ambientLight = new THREE.AmbientLight(0x404040, 2);
-            scene.add(ambientLight);
-            const pointLight = new THREE.PointLight(0x00f2ff, 2, 50);
-            pointLight.position.set(10, 10, 10);
-            scene.add(pointLight);
-
-            animate();
+            // Thêm "chân rết" IC cho đẹp
+            const wireframe = new THREE.LineSegments(
+                new THREE.EdgesGeometry(geometry),
+                new THREE.LineBasicMaterial({ color: 0x00ffcc })
+            );
+            mesh.add(wireframe);
+            return mesh;
         }
 
+        // Tạo CPU Trung tâm
+        const cpuCentral = createComponent(0, 0, 1, 0x333333);
+        cpuCentral.scale.set(3, 0.5, 3);
+        scene.add(cpuCentral);
+
+        // Tạo các tòa nhà xung quanh (linh kiện nhỏ)
+        for(let i=0; i<40; i++) {
+            const x = (Math.random() - 0.5) * 20;
+            const z = (Math.random() - 0.5) * 20;
+            if (Math.abs(x) < 3 && Math.abs(z) < 3) continue; // Tránh đè lên CPU trung tâm
+            
+            const h = Math.random() * 4 + 0.5;
+            const color = i % 2 === 0 ? 0x00ffcc : 0x0066ff;
+            const building = createComponent(x, z, h, color);
+            cityGroup.add(building);
+        }
+        scene.add(cityGroup);
+
+        // --- HIỆU ỨNG DỮ LIỆU (PARTICLES) ---
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 2000;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for(let i=0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 30;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            color: 0x00ffcc,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // --- ANIMATION ---
         function animate() {
             requestAnimationFrame(animate);
-
-            // Quay camera quanh tâm
-            const time = Date.now() * 0.0005;
-            camera.position.x = Math.sin(time) * 20;
-            camera.position.z = Math.cos(time) * 20;
-            camera.position.y = 12 + Math.sin(time*0.5) * 2; // Bay lên xuống nhẹ
             
-            camera.lookAt(0, 0, 0);
+            // Xoay nhẹ cả thành phố
+            cityGroup.rotation.y += 0.002;
+            particlesMesh.rotation.y -= 0.001;
 
+            // Hiệu ứng đèn nhấp nháy cho CPU
+            const time = Date.now() * 0.005;
+            cpuCentral.material.emissiveIntensity = Math.sin(time) * 0.5 + 0.5;
+
+            controls.update();
             renderer.render(scene, camera);
         }
 
+        // Xử lý khi resize màn hình
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        init();
+        animate();
     </script>
 </body>
 </html>

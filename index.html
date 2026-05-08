@@ -1,79 +1,362 @@
-// ── DIODE (Nâng cấp độ chi tiết cực cao) ───────────────────────────
-function buildDiode(cx, cz, angle) {
-  const g = new THREE.Group(); 
-  g.position.set(cx, 0, cz);
-  g.rotation.y = angle || 0;
-  
-  const len = 2.8, rad = 0.45, S = 24, h = 0.7; // Độ cao so với board
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electronic City 3D - Ultra Realistic ⚡</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
+canvas { display:block; }
 
-  // 1. Thân Diode (Chất liệu thủy tinh bóng mờ 1N4148)
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0x771a0a,
-    roughness: 0.1,
-    metalness: 0.2,
-    transparent: true,
-    opacity: 0.9,
-    emissive: 0x330600,
-    emissiveIntensity: 0.4
-  });
-  const body = cyl(rad, rad, len, S, bodyMat);
-  body.rotation.z = Math.PI / 2;
-  body.position.set(0, h, 0);
-  g.add(body);
-
-  // 2. Vạch đánh dấu cực âm (Cathode Band) - Sát mép thực tế
-  const bandMat = mat(0xeeeeee, 0.4, 0.1);
-  const band = cyl(rad + 0.02, rad + 0.02, 0.35, S, bandMat);
-  band.rotation.z = Math.PI / 2;
-  band.position.set(len * 0.3, h, 0); // Vị trí vạch bạc
-  g.add(band);
-
-  // 3. Hai đầu bọc kim loại (Internal junction)
-  [-len/2, len/2].forEach(x => {
-    const cap = cyl(rad - 0.05, rad - 0.05, 0.15, S, M.leg);
-    cap.rotation.z = Math.PI / 2;
-    cap.position.set(x, h, 0);
-    g.add(cap);
-  });
-
-  // 4. Chân linh kiện (Leads) - Uốn cong cơ khí
-  const leadRadius = 0.08;
-  const leadExt = 1.8; // Độ dài chân chạy ngang trước khi cắm xuống
-  
-  [-1, 1].forEach(side => {
-    // Đoạn nằm ngang
-    const hLead = box(leadExt, leadRadius, leadRadius, M.leg);
-    hLead.position.set(side * (len/2 + leadExt/2), h, 0);
-    g.add(hLead);
-    
-    // Khớp nối bo tròn tại góc uốn
-    const knee = new THREE.Mesh(new THREE.SphereGeometry(leadRadius, 8, 8), M.leg);
-    knee.position.set(side * (len/2 + leadExt), h, 0);
-    g.add(knee);
-
-    // Đoạn cắm xuống board
-    const vLead = box(leadRadius, h, leadRadius, M.leg);
-    vLead.position.set(side * (len/2 + leadExt), h/2, 0);
-    g.add(vLead);
-
-    // Mối hàn (Solder) tại điểm tiếp xúc PCB
-    solder(g, side * (len/2 + leadExt), 0, 1.2);
-  });
-
-  // 5. Hiệu ứng Forward-Bias (Ánh sáng khi có dòng chạy qua)
-  const biasLight = new THREE.PointLight(0xff3300, 0.8, 5);
-  biasLight.position.set(0, h + 0.5, 0);
-  g.add(biasLight);
-
-  scene.add(g);
-  return g;
+#overlay {
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  pointer-events:none; z-index:10;
 }
 
-// ── TRIỂN KHAI DIODE VÀO CÁC VỊ TRÍ CHIẾN THUẬT ───────────────
-// (Thêm đoạn này vào phần BUILD CITY của bạn)
-[
-  [-19, 6, 0], [-19, -6, Math.PI], [-19, 12, 0], [-19, -12, Math.PI],
-  [17, 6, 0], [17, -6, Math.PI], [17, 12, 0], [17, -12, Math.PI],
-  [-6, -19, Math.PI/2], [6, -19, Math.PI/2], [-12, -19, Math.PI/2],
-  [-6, 17, -Math.PI/2], [6, 17, -Math.PI/2], [12, 17, -Math.PI/2]
-].forEach(([x, z, a]) => buildDiode(x, z, a));
+#title {
+  position:absolute; top:28px; left:50%; transform:translateX(-50%);
+  text-align:center;
+}
+#title h1 {
+  font-size:clamp(16px,2.5vw,28px);
+  font-weight:900; letter-spacing:6px; color:#00ffaa;
+  text-shadow:0 0 20px #00ffaa, 0 0 50px #00ffaa66;
+  animation:glow 2.5s ease-in-out infinite;
+}
+#title p { font-size:10px; color:#00ffaa55; letter-spacing:8px; margin-top:5px; }
+@keyframes glow {
+  0%,100% { text-shadow:0 0 20px #00ffaa, 0 0 50px #00ffaa66; }
+  50% { text-shadow:0 0 30px #00ffaa, 0 0 80px #00ffaaaa, 0 0 120px #00ffaa33; }
+}
+
+#legend {
+  position:absolute; bottom:24px; right:20px;
+  background:rgba(0,15,8,0.88); border:1px solid #00ffaa22;
+  border-radius:6px; padding:14px 18px; backdrop-filter:blur(10px);
+}
+#legend h3 { font-size:9px; color:#00ffaa; letter-spacing:4px; margin-bottom:10px;
+  border-bottom:1px solid #00ffaa22; padding-bottom:6px; }
+.li { display:flex; align-items:center; gap:9px; margin-bottom:7px; font-size:10px; color:#88bbaa; }
+.ld { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+#stats {
+  position:absolute; bottom:24px; left:20px;
+  font-size:10px; color:#00ffaa44; line-height:2;
+}
+
+#cam-info {
+  position:absolute; top:90px; left:20px;
+  font-size:9px; color:#00ffaa33; line-height:1.8;
+}
+
+#scanline {
+  position:absolute; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+}
+#vignette {
+  position:absolute; inset:0;
+  background:radial-gradient(ellipse at center,transparent 40%,rgba(0,0,0,0.75) 100%);
+}
+
+#loading {
+  position:fixed; inset:0; background:#000;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:100; transition:opacity 1s ease;
+}
+#loading h2 { color:#00ffaa; font-size:18px; letter-spacing:6px; margin-bottom:20px; }
+#loading-bar { width:300px; height:2px; background:#00ffaa22; border-radius:1px; }
+#loading-fill { height:100%; background:#00ffaa; border-radius:1px; width:0%; transition:width 0.3s; box-shadow:0 0 10px #00ffaa; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <h2>INITIALIZING PCB...</h2>
+  <div id="loading-bar"><div id="loading-fill"></div></div>
+</div>
+
+<div id="overlay">
+  <div id="scanline"></div>
+  <div id="vignette"></div>
+  <div id="title">
+    <h1>ELECTRONIC CITY</h1>
+    <p>PCB METROPOLIS · 3D RENDER</p>
+  </div>
+  <div id="cam-info">
+    CAM MODE : AUTO ORBIT<br>
+    ALTITUDE : <span id="alt">---</span>m<br>
+    ANGLE    : <span id="ang">---</span>°
+  </div>
+  <div id="legend">
+    <h3>// COMPONENTS</h3>
+    <div class="li"><div class="ld" style="background:#9090ee;box-shadow:0 0 6px #6666cc"></div>IC CHIP — City Center</div>
+    <div class="li"><div class="ld" style="background:#66bbdd;box-shadow:0 0 6px #3388bb"></div>Capacitor — Skyscraper</div>
+    <div class="li"><div class="ld" style="background:#cc8833;box-shadow:0 0 6px #aa6622"></div>Resistor — Building</div>
+    <div class="li"><div class="ld" style="background:#cc3322;box-shadow:0 0 6px #aa2211"></div>Diode — Power Gate</div>
+    <div class="li"><div class="ld" style="background:#8844cc;box-shadow:0 0 6px #6622aa"></div>Transistor — Factory</div>
+    <div class="li"><div class="ld" style="background:#997733;box-shadow:0 0 6px #775522"></div>Transformer — Power Stn</div>
+    <div class="li"><div class="ld" style="background:#33aa55;box-shadow:0 0 6px #118833"></div>Ceramic Cap — Tree</div>
+  </div>
+  <div id="stats">
+    VCC : 5.0V DC<br>
+    I   : <span id="si">0.00</span>A<br>
+    F   : 1.000 MHz<br>
+    T   : <span id="st">25</span>°C<br>
+    UP  : <span id="su">00:00:00</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const loadFill = document.getElementById('loading-fill');
+const loadDiv  = document.getElementById('loading');
+let loadPct = 0;
+const loadInterval = setInterval(() => {
+  loadPct = Math.min(loadPct + Math.random()*15, 90);
+  loadFill.style.width = loadPct+'%';
+}, 120);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x010d05);
+scene.fog = new THREE.FogExp2(0x010d05, 0.009);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(55, 35, 55);
+camera.lookAt(0,3,0);
+
+window.addEventListener('resize',()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+scene.add(new THREE.AmbientLight(0x112208, 0.9));
+const sun = new THREE.DirectionalLight(0x99ffcc, 1.1);
+sun.position.set(40,70,30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{near:0.1,far:220,left:-70,right:70,top:70,bottom:-70});
+scene.add(sun);
+
+const fill = new THREE.DirectionalLight(0x2244ff, 0.25);
+fill.position.set(-30,15,-30);
+scene.add(fill);
+
+const chipGlow = new THREE.PointLight(0x8888ff,3,35);
+chipGlow.position.set(0,7,0);
+scene.add(chipGlow);
+
+[[-22,4,-22],[22,4,-22],[-22,4,22],[22,4,22]].forEach(([x,y,z])=>{
+  const l = new THREE.PointLight(0xffcc44,1.8,18);
+  l.position.set(x,y,z);
+  scene.add(l);
+});
+
+function mat(color,rough,metal,emissive,emI){
+  return new THREE.MeshStandardMaterial({
+    color, roughness:rough??0.5, metalness:metal??0,
+    emissive:emissive??0x000000, emissiveIntensity:emI??0
+  });
+}
+
+const M = {
+  pcb:      mat(0x0a2a10,0.7,0.1),
+  trace:    mat(0xc8a020,0.25,0.85,0x442200,0.3),
+  via:      mat(0xddbb44,0.2,0.9),
+  solder:   mat(0xd4d0a8,0.18,0.82,0x221f00,0.05),
+  leg:      mat(0xd8d8e8,0.12,0.97),
+  chipBody: mat(0x1c1c38,0.45,0.25),
+  chipTop:  mat(0x141428,0.35,0.15),
+  chipDie:  mat(0x2a2a88,0.2,0.2,0x111166,0.9),
+  chipMark: mat(0xaaaaff,0.8,0,0x4444cc,0.5),
+  capBody:  mat(0x1a4466,0.3,0.35),
+  capMetal: mat(0x99bbcc,0.2,0.8),
+  capStrip: mat(0xf0f0f0,0.6),
+  resBody:  mat(0xaa7733,0.75),
+  resCap:   mat(0xddccaa,0.35,0.6),
+  diode:    mat(0x771a0a,0.1,0.2,0x330600,0.4), // New Glassy Mat
+  diodeBand:mat(0xdddddd,0.4,0.1),
+  npn:      mat(0x111111,0.25,0.5),
+  npnBase:  mat(0x1a1a1a,0.2,0.65),
+  npnLabel: mat(0xdddddd,0.9),
+  xCore:    mat(0x222222,0.5,0.55),
+  xCoilA:   mat(0xcc9922,0.25,0.75),
+  xCoilB:   mat(0x7733bb,0.25,0.75),
+  xBase:    mat(0x2a2a2a,0.5,0.4),
+  treeDisc: mat(0x22aa44,0.65,0,0x0a3318,0.4),
+  treeStem: mat(0x557733,0.8),
+  ledGreen: mat(0x00ff88,0.1,0,0x00ff88,2),
+  ledRed:   mat(0xff3300,0.1,0,0xff3300,2),
+  ledYellow:mat(0xffcc00,0.1,0,0xffcc00,2),
+};
+
+const BAND_MATS = [0xff2222,0xff8800,0xffff22,0x22ff22,0x2255ff,0xcc22ff,0xffffff,0x888888,0x222222].map(c=>mat(c,0.5));
+
+function box(w,h,d,m){ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); mesh.castShadow=true; mesh.receiveShadow=true; return mesh; }
+function cyl(rt,rb,h,seg,m){ const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m); mesh.castShadow=true; mesh.receiveShadow=true; return mesh; }
+
+function solder(parent,x,z,size){
+  const sz=size||1;
+  const pad=box(sz*0.55,0.04,sz*0.55,M.trace);
+  pad.position.set(x,0.022,z); parent.add(pad);
+  const base=cyl(sz*0.24,sz*0.28,0.09,12,M.solder);
+  base.position.set(x,0.045,z); parent.add(base);
+  const mid=cyl(sz*0.16,sz*0.24,0.09,12,M.solder);
+  mid.position.set(x,0.11,z); parent.add(mid);
+  const tip=cyl(sz*0.07,sz*0.16,0.07,10,M.solder);
+  tip.position.set(x,0.175,z); parent.add(tip);
+}
+
+function buildPCB(){
+  const g=new THREE.Group();
+  const board=box(95,0.7,95,M.pcb);
+  board.position.y=-0.35; board.receiveShadow=true;
+  g.add(board);
+  function trace(x1,z1,x2,z2,w=0.2){
+    const dx=x2-x1,dz=z2-z1,len=Math.sqrt(dx*dx+dz*dz);
+    const t=box(w,0.05,len,M.trace);
+    t.position.set((x1+x2)/2,0.025,(z1+z2)/2);
+    t.rotation.y=Math.atan2(dx,dz);
+    g.add(t);
+  }
+  [-12,-6,0,6,12].forEach(z=>trace(-40,z,40,z,0.25));
+  [-12,-6,0,6,12].forEach(x=>trace(x,-40,x,40,0.25));
+  scene.add(g);
+}
+
+function buildChip(cx,cz){
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  const W=11,H=2.4,D=11;
+  const body=box(W,H,D,M.chipBody); body.position.y=H/2; g.add(body);
+  const silk=box(W*0.94,0.04,D*0.94,M.chipTop); silk.position.y=H+0.021; g.add(silk);
+  scene.add(g); return g;
+}
+
+function buildCap(cx,cz,height,radius){
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  const body=cyl(radius,radius,height,24,M.capBody); body.position.y=height/2; g.add(body);
+  solder(g,-radius*0.3,0); solder(g,radius*0.3,0);
+  scene.add(g); return g;
+}
+
+function buildRes(cx,cz,angle,bands){
+  const g=new THREE.Group(); g.position.set(cx,0,cz); g.rotation.y=angle||0;
+  const len=3.2,rad=0.48,h=0.7;
+  const body=cyl(rad,rad,len,20,M.resBody); body.rotation.z=Math.PI/2; body.position.set(0,h,0); g.add(body);
+  [-1,1].forEach(side=>{
+    const vLead=box(0.09,h,0.09,M.leg); vLead.position.set(side*(len/2+2.2),h/2,0); g.add(vLead);
+    solder(g,side*(len/2+2.2),0);
+  });
+  scene.add(g); return g;
+}
+
+// ── DIODE (Vá Diode thật vào đây) ─────────────────────────────────
+function buildDiode(cx,cz,angle){
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  g.rotation.y=angle||0;
+  const len=2.8, rad=0.45, h=0.7; 
+
+  // Thân Diode (Glassy)
+  const body = cyl(rad, rad, len, 24, M.diode);
+  body.rotation.z = Math.PI/2; body.position.set(0, h, 0); g.add(body);
+
+  // Vạch Cathode
+  const band = cyl(rad + 0.02, rad + 0.02, 0.35, 24, M.diodeBand);
+  band.rotation.z = Math.PI/2; band.position.set(len*0.3, h, 0); g.add(band);
+
+  // Chân uốn cong (Mechanical Leads)
+  const leadExt = 1.8;
+  [-1,1].forEach(side => {
+    const hLead = box(leadExt, 0.08, 0.08, M.leg);
+    hLead.position.set(side*(len/2 + leadExt/2), h, 0); g.add(hLead);
+    const vLead = box(0.08, h, 0.08, M.leg);
+    vLead.position.set(side*(len/2 + leadExt), h/2, 0); g.add(vLead);
+    solder(g, side*(len/2 + leadExt), 0);
+  });
+
+  // Ánh sáng Forward Bias hắt xuống board
+  const gl = new THREE.PointLight(0xff3300, 0.6, 5);
+  gl.position.set(0, h+0.2, 0); g.add(gl);
+
+  scene.add(g); return g;
+}
+
+function buildTransistor(cx,cz,angle){
+  const g=new THREE.Group(); g.position.set(cx,0,cz); g.rotation.y=angle||0;
+  const rad=0.72,H=1.8;
+  const body=box(rad*2,H,rad,M.npn); body.position.y=H/2+0.1; g.add(body);
+  solder(g,-0.38,0); solder(g,0,0); solder(g,0.38,0);
+  scene.add(g); return g;
+}
+
+function buildTransformer(cx,cz){
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  const core=box(6.5,2.5,5,M.xCore); core.position.y=1.5; g.add(core);
+  [[-2.5,0,-2],[2.5,0,2]].forEach(([ox,oy,oz])=>solder(g,ox,oz));
+  scene.add(g); return g;
+}
+
+function buildTree(cx,cz,scale){
+  const g=new THREE.Group(); g.position.set(cx,0,cz); g.scale.setScalar(scale||1);
+  const stem=cyl(0.1,0.1,1.3,8,M.treeStem); stem.position.y=0.65; g.add(stem);
+  const disc=box(1.8,0.4,1.8,M.treeDisc); disc.position.y=1.5; g.add(disc);
+  solder(g,-0.2,0); solder(g,0.2,0);
+  scene.add(g); return g;
+}
+
+const PARTS=[];
+const pGeo=new THREE.BufferGeometry();
+const pPos=new Float32Array(350*3);
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const pSys=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x00ffaa,size:0.25}));
+scene.add(pSys);
+
+function updateParts(){
+  for(let i=0; i<350; i++){
+    pPos[i*3] = (Math.random()-0.5)*90;
+    pPos[i*3+1] = 0.1;
+    pPos[i*3+2] = (Math.random()-0.5)*90;
+  }
+  pGeo.attributes.position.needsUpdate=true;
+}
+
+buildPCB();
+buildChip(0,0);
+[[-15,-4,5.8,0.92],[13,4,7.0,0.92]].forEach(([x,z,h,r])=>buildCap(x,z,h,r));
+[[-21,-9,0,[0,2,4,1]],[19,13,1.3,[4,3,1,0]]].forEach(([x,z,a,b])=>buildRes(x,z,a,b));
+[[-19,6,0],[-19,-6,Math.PI],[17,6,0],[17,-6,Math.PI]].forEach(([x,z,a])=>buildDiode(x,z,a));
+[[-24,-24],[24,24]].forEach(([x,z])=>buildTransformer(x,z));
+[[-27,-9,1.0],[25,15,1.0]].forEach(([x,z,s])=>buildTree(x,z,s));
+
+let camT=0;
+function animate(){
+  requestAnimationFrame(animate);
+  camT+=0.002;
+  camera.position.x = Math.cos(camT)*60;
+  camera.position.z = Math.sin(camT)*60;
+  camera.lookAt(0,0,0);
+  
+  updateParts();
+  
+  const el=Math.floor((Date.now()-0)/1000);
+  document.getElementById('su').textContent=el;
+  document.getElementById('alt').textContent=Math.round(camera.position.y);
+  
+  renderer.render(scene,camera);
+}
+
+loadFill.style.width='100%';
+setTimeout(()=>{ loadDiv.style.opacity='0'; animate(); },400);
+</script>
+</body>
+</html>

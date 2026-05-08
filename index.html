@@ -177,8 +177,8 @@ const M = {
   pcb:      mat(0x0a2a10,0.7,0.1),
   trace:    mat(0xc8a020,0.25,0.85,0x442200,0.3),
   via:      mat(0xddbb44,0.2,0.9),
-  solder:   mat(0xccccaa,0.3,0.7),
-  leg:      mat(0xcccccc,0.2,0.95),
+  solder:   mat(0xd4d0a8,0.18,0.82,0x221f00,0.05),
+  leg:      mat(0xd8d8e8,0.12,0.97),
 
   chipBody: mat(0x1c1c38,0.45,0.25),
   chipTop:  mat(0x141428,0.35,0.15),
@@ -221,10 +221,23 @@ function box(w,h,d,m){ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m)
 function cyl(rt,rb,h,seg,m){ const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m); mesh.castShadow=true; mesh.receiveShadow=true; return mesh; }
 function add(parent,...children){ children.forEach(c=>parent.add(c)); }
 
-function solder(parent,x,z){
-  const s=cyl(0.07,0.1,0.13,8,M.solder);
-  s.position.set(x,-0.065,z);
-  parent.add(s);
+function solder(parent,x,z,size){
+  const sz=size||1;
+  // PCB copper pad underneath
+  const pad=box(sz*0.55,0.04,sz*0.55,M.trace);
+  pad.position.set(x,0.022,z); parent.add(pad);
+  // Solder fillet — meniscus shape (wide base, narrow top)
+  const base=cyl(sz*0.24,sz*0.28,0.09,12,M.solder);
+  base.position.set(x,0.045,z); parent.add(base);
+  // Middle meniscus
+  const mid=cyl(sz*0.16,sz*0.24,0.09,12,M.solder);
+  mid.position.set(x,0.11,z); parent.add(mid);
+  // Top fillet peak
+  const tip=cyl(sz*0.07,sz*0.16,0.07,10,M.solder);
+  tip.position.set(x,0.175,z); parent.add(tip);
+  // Subtle oxidation sheen ring
+  const sheen=cyl(sz*0.29,sz*0.31,0.035,12,mat(0xddddbb,0.15,0.8));
+  sheen.position.set(x,0.038,z); parent.add(sheen);
 }
 
 // ── PCB ─────────────────────────────────────────────────────
@@ -267,98 +280,242 @@ function buildPCB(){
   scene.add(g);
 }
 
-// ── IC CHIP ─────────────────────────────────────────────────
+// ── IC CHIP (QFP ultra-realistic) ───────────────────────────
 function buildChip(cx,cz){
   const g=new THREE.Group(); g.position.set(cx,0,cz);
   const W=11,D=11,H=2.4;
 
+  // ── Thermal pad on PCB (exposed copper, slightly recessed) ──
+  const thermalPad=box(W*0.72,0.055,D*0.72,mat(0xd4a017,0.18,0.9,0x443300,0.15));
+  thermalPad.position.set(0,0.028,0); g.add(thermalPad);
+  // Pad grid (solder mask openings)
+  for(let pi=-1;pi<=1;pi++) for(let pj=-1;pj<=1;pj++){
+    const pm=box(1.6,0.065,1.6,mat(0xe8b820,0.12,0.95));
+    pm.position.set(pi*1.9,0.033,pj*1.9); g.add(pm);
+  }
+  // Thermal via holes on pad
+  for(let vi=-1;vi<=1;vi++) for(let vj=-1;vj<=1;vj++){
+    const via=cyl(0.18,0.18,0.08,10,M.via);
+    via.position.set(vi*1.9,0.04,vj*1.9); g.add(via);
+  }
+
+  // ── Main chip body ──────────────────────────────────────────
   const body=box(W,H,D,M.chipBody);
   body.position.y=H/2; g.add(body);
 
-  // Bevel edge ring
-  const bevel=box(W+0.1,0.15,D+0.1,mat(0x2a2a4a,0.4,0.3));
-  bevel.position.y=H-0.05; g.add(bevel);
+  // Beveled bottom edge (chamfer lines around base)
+  [[-1,0],[1,0],[0,-1],[0,1]].forEach(([sx,sz])=>{
+    const ch=box(sx?0.18:W+0.1,0.22,sz?0.18:D+0.1,mat(0x101025,0.5,0.4));
+    ch.position.set(sx*(W/2-0.05),0.11,sz*(D/2-0.05)); g.add(ch);
+  });
 
-  // Top silk layer
-  const silk=box(W*0.92,0.04,D*0.92,M.chipTop);
-  silk.position.y=H+0.02; g.add(silk);
+  // Top bevel edge ring
+  const bevelTop=box(W+0.08,0.12,D+0.08,mat(0x2a2a4a,0.38,0.3));
+  bevelTop.position.y=H-0.04; g.add(bevelTop);
 
-  // Die window
-  const die=box(W*0.48,0.06,D*0.48,M.chipDie);
-  die.position.y=H+0.04; g.add(die);
+  // ── Epoxy top surface ───────────────────────────────────────
+  const silk=box(W*0.94,0.04,D*0.94,M.chipTop);
+  silk.position.y=H+0.021; g.add(silk);
 
-  // Die grid lines
+  // Silk-screen rectangle frame on top
+  [[W*0.88,0.025,0.12],[0.12,0.025,D*0.88]].forEach(([sw,sh,sd])=>{
+    for(const sx of [-W*0.44,W*0.44]){
+      const sl=box(sw,sh,sd,mat(0xffffff,0.85,0,0xaaaaff,0.06));
+      sl.position.set(0,H+0.04,sx*(D/W)); g.add(sl);
+    }
+  });
+  const fr1=box(W*0.88,0.025,0.12,mat(0xffffff,0.85,0,0xaaaaff,0.06));
+  fr1.position.set(0,H+0.04,-D*0.44); g.add(fr1);
+  const fr2=fr1.clone(); fr2.position.set(0,H+0.04,D*0.44); g.add(fr2);
+  const fr3=box(0.12,0.025,D*0.88,mat(0xffffff,0.85,0,0xaaaaff,0.06));
+  fr3.position.set(-W*0.44,H+0.04,0); g.add(fr3);
+  const fr4=fr3.clone(); fr4.position.set(W*0.44,H+0.04,0); g.add(fr4);
+
+  // ── Die window (exposed silicon) ───────────────────────────
+  const die=box(W*0.46,0.07,D*0.46,M.chipDie);
+  die.position.y=H+0.035; g.add(die);
+
+  // Die internal circuit grid (metal layer lines)
+  for(let i=-3;i<=3;i++){
+    const hl=box(W*0.44,0.03,0.05,mat(0x5555cc,0.25,0.1,0x2222bb,0.45));
+    hl.position.set(0,H+0.075,i*0.32); g.add(hl);
+    const vl=box(0.05,0.03,D*0.44,mat(0x5555cc,0.25,0.1,0x2222bb,0.45));
+    vl.position.set(i*0.32,H+0.075,0); g.add(vl);
+  }
+  // Diagonal metal routing lines (more realistic)
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI;
+    const rl=box(W*0.38,0.025,0.04,mat(0x7777dd,0.2,0.2,0x3333bb,0.3));
+    rl.position.set(0,H+0.08,0); rl.rotation.y=a; g.add(rl);
+  }
+  // Bright metal contact pads on die edge
   for(let i=-2;i<=2;i++){
-    const hl=box(W*0.46,0.02,0.06,mat(0x4444bb,0.3,0,0x2222aa,0.3));
-    hl.position.set(0,H+0.08,i*0.5); g.add(hl);
-    const vl=box(0.06,0.02,D*0.46,mat(0x4444bb,0.3,0,0x2222aa,0.3));
-    vl.position.set(i*0.5,H+0.08,0); g.add(vl);
+    [[W*0.22,i*0.3],[- W*0.22,i*0.3],[i*0.3,D*0.22],[i*0.3,-D*0.22]].forEach(([px,pz])=>{
+      const pad=box(0.14,0.04,0.14,mat(0xddddff,0.1,0.6,0x8888ee,0.8));
+      pad.position.set(px,H+0.08,pz); g.add(pad);
+    });
   }
 
-  // Pin-1 circle
-  const p1=cyl(0.32,0.32,0.05,16,M.chipMark);
-  p1.position.set(-W*0.37,H+0.04,-D*0.37); g.add(p1);
+  // ── Pin-1 indicator (notch + circle) ───────────────────────
+  const notch=box(0.5,0.12,0.5,mat(0x080818,0.3));
+  notch.position.set(-W*0.45,H+0.015,-D*0.45); g.add(notch);
+  const p1dot=cyl(0.28,0.28,0.055,16,mat(0xccccff,0.7,0,0x6666dd,0.5));
+  p1dot.position.set(-W*0.37,H+0.045,-D*0.37); g.add(p1dot);
 
-  // Bond wires
-  for(let i=0;i<10;i++){
-    const a=(i/10)*Math.PI*2;
+  // ── Bond wires (curved arc from die pad to package pad) ────
+  const bondMat=mat(0xffdd88,0.1,0.9,0xcc9900,0.2);
+  for(let i=0;i<16;i++){
+    const a=(i/16)*Math.PI*2;
+    const r0=1.0, r1=2.4;
     const curve=new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(Math.cos(a)*1.8,H+0.06,Math.sin(a)*1.8),
-      new THREE.Vector3(Math.cos(a)*1.1,H+1.5,Math.sin(a)*1.1),
-      new THREE.Vector3(Math.cos(a)*0.3,H+0.08,Math.sin(a)*0.3)
+      new THREE.Vector3(Math.cos(a)*r0, H+0.07, Math.sin(a)*r0),
+      new THREE.Vector3(Math.cos(a)*((r0+r1)/2), H+0.9+Math.random()*0.3, Math.sin(a)*((r0+r1)/2)),
+      new THREE.Vector3(Math.cos(a)*r1, H+0.065, Math.sin(a)*r1)
     );
-    const wire=new THREE.Mesh(new THREE.TubeGeometry(curve,12,0.028,4),M.leg);
+    const wire=new THREE.Mesh(new THREE.TubeGeometry(curve,16,0.022,5),bondMat);
     g.add(wire);
+    // Die bond pad
+    const bp=box(0.12,0.035,0.12,mat(0xffee99,0.1,0.9));
+    bp.position.set(Math.cos(a)*r0,H+0.072,Math.sin(a)*r0); g.add(bp);
   }
 
-  // QFP PINS — 4 sides × 9 pins each
-  const pinN=9, pinSpan=D*0.82, pinSpacing=pinSpan/(pinN-1);
+  // ── QFP PINS — 4 sides × 11 pins, true gull-wing geometry ──
+  const pinN=11;
+  const pinSpan=D*0.84;
+  const pinSpacing=pinSpan/(pinN-1);
+  const pinW=0.14;    // pin width
+  const pinT=0.09;    // pin thickness
+  const bodyOvhg=0.0; // how far stub starts from body edge
+  const gullH=0.9;    // vertical drop height
+  const gullExt=1.75; // how far foot extends outward from body
+  const footLen=1.1;  // length of flat solder foot
+
+  const pinMat=mat(0xc0c0d8,0.15,0.9,0x000000,0);
+  const pinSideMat=mat(0xa0a0c0,0.2,0.85);
+
   const sides=[
-    {axis:'x',sign:-1,rot:0},
-    {axis:'x',sign:1, rot:0},
-    {axis:'z',sign:-1,rot:Math.PI/2},
-    {axis:'z',sign:1, rot:Math.PI/2},
+    {axis:'x',sign:-1},
+    {axis:'x',sign: 1},
+    {axis:'z',sign:-1},
+    {axis:'z',sign: 1},
   ];
-  sides.forEach(({axis,sign,rot})=>{
+
+  sides.forEach(({axis,sign})=>{
+    const isX = axis==='x';
     for(let i=0;i<pinN;i++){
-      const offset=-pinSpan/2+i*pinSpacing;
-      const bx=axis==='x'?sign*(W/2):offset;
-      const bz=axis==='z'?sign*(D/2):offset;
-      const gullDist=1.9, gullSign=sign;
+      const offset = -pinSpan/2 + i*pinSpacing;
 
-      // Vertical stub (gull-wing)
-      const stub=box(0.17,1.1,0.12,M.leg);
-      stub.position.set(
-        axis==='x'?bx+gullSign*0.38:bx,
-        H-0.55,
-        axis==='z'?bz+gullSign*0.38:bz
-      );
-      if(rot) stub.rotation.y=rot;
-      g.add(stub);
+      // Base x,z position of pin at package edge
+      const edgeX = isX ? sign*(W/2) : offset;
+      const edgeZ = isX ? offset      : sign*(D/2);
 
-      // Horizontal foot
-      const foot=box(axis==='x'?gullDist:0.12, 0.1, axis==='z'?gullDist:0.12, M.leg);
-      foot.position.set(
-        axis==='x'?bx+gullSign*(W/2*0.18+gullDist/2):bx,
-        0.05,
-        axis==='z'?bz+gullSign*(D/2*0.18+gullDist/2):bz
+      // ── Segment 1: vertical stub down from package underside ─
+      // Runs from y=0.1 (package bottom) down to y=(H-gullH)
+      const stubH = H - 0.4;
+      const stubMesh = box(
+        isX ? pinT : pinW,
+        stubH,
+        isX ? pinW : pinT,
+        pinMat
       );
+      stubMesh.position.set(
+        isX ? edgeX + sign*0.05 : edgeX,
+        H - stubH/2 - 0.15,
+        isX ? edgeZ             : edgeZ + sign*0.05
+      );
+      g.add(stubMesh);
+
+      // ── Segment 2: curved knee (gull-wing bend outward) ─────
+      // Approximate with 4 small rotated boxes forming an arc
+      const kneePts=5;
+      for(let k=0;k<kneePts;k++){
+        const t=k/(kneePts-1);
+        const ang=(t-0.5)*Math.PI*0.52; // sweep 94°
+        const kr=0.38;
+        // Center of knee arc
+        const kCX = isX ? edgeX + sign*(W*0.02 + kr) : edgeX;
+        const kCZ = isX ? edgeZ                        : edgeZ + sign*(D*0.02 + kr);
+        const kY  = gullH - 0.18;
+        const px = isX ? kCX + Math.sin(ang)*kr*sign - sign*kr : kCX;
+        const pz = isX ? kCZ                                    : kCZ + Math.sin(ang)*kr*sign - sign*kr;
+        const py  = kY + Math.cos(ang)*kr - kr + 0.2;
+        const seg=box(
+          isX ? pinT*1.05 : pinW,
+          pinT*1.05,
+          isX ? pinW      : pinT*1.05,
+          pinMat
+        );
+        seg.position.set(
+          isX ? edgeX+sign*(kr*(1-Math.cos(ang+Math.PI/2))+0.05) : edgeX,
+          gullH - kr + kr*Math.sin(t*Math.PI*0.5) + 0.08,
+          isX ? edgeZ : edgeZ+sign*(kr*(1-Math.cos(ang+Math.PI/2))+0.05)
+        );
+        g.add(seg);
+      }
+
+      // ── Segment 3: horizontal foot (flat on PCB) ─────────────
+      const footX = isX ? edgeX + sign*(W/2*0.06 + gullExt - footLen/2) : edgeX;
+      const footZ = isX ? edgeZ                                           : edgeZ + sign*(D/2*0.06 + gullExt - footLen/2);
+      const foot=box(
+        isX ? footLen : pinW,
+        pinT*0.9,
+        isX ? pinW   : footLen,
+        pinMat
+      );
+      foot.position.set(footX, 0.065, footZ);
       g.add(foot);
-      solder(g,
-        axis==='x'?bx+gullSign*(W/2*0.18+gullDist*0.9):bx,
-        axis==='z'?bz+gullSign*(D/2*0.18+gullDist*0.9):bz
+
+      // ── PCB copper pad under foot ─────────────────────────────
+      const padX = isX ? edgeX + sign*(W/2*0.06 + gullExt) : edgeX;
+      const padZ = isX ? edgeZ                              : edgeZ + sign*(D/2*0.06 + gullExt);
+      const cpPad=box(
+        isX ? footLen+0.18 : pinW+0.18,
+        0.05,
+        isX ? pinW+0.18   : footLen+0.18,
+        mat(0xd4a020,0.18,0.9)
       );
+      cpPad.position.set(padX, 0.025, padZ); g.add(cpPad);
+
+      // ── Solder fillet — meniscus at toe, heel, and flanks ────
+      // Toe fillet
+      const toeSX = isX ? edgeX + sign*(W/2*0.06 + gullExt + footLen/2 - 0.08) : edgeX;
+      const toeSZ = isX ? edgeZ : edgeZ + sign*(D/2*0.06 + gullExt + footLen/2 - 0.08);
+      const toeFillet=cyl(pinW*0.7, pinW*0.95, 0.19, 10, M.solder);
+      toeFillet.position.set(toeSX, 0.085, toeSZ); g.add(toeFillet);
+      const toeSheen=cyl(pinW*0.98, pinW*1.0, 0.05, 10, mat(0xe0ddc0,0.12,0.85));
+      toeSheen.position.set(toeSX, 0.025, toeSZ); g.add(toeSheen);
+
+      // Heel fillet (at body edge)
+      const heelDX = isX ? sign*( W/2 + 0.2) : 0;
+      const heelDZ = isX ? 0                  : sign*(D/2 + 0.2);
+      const heelFillet=cyl(pinW*0.55, pinW*0.8, 0.24, 10, M.solder);
+      heelFillet.position.set(edgeX+heelDX*0.35, 0.18, edgeZ+heelDZ*0.35); g.add(heelFillet);
+
+      // Side fillets
+      for(const fs of [-1,1]){
+        const sideFillet=cyl(pinT*0.5, pinT*0.7, 0.14, 8, M.solder);
+        sideFillet.position.set(
+          isX ? footX : footX + fs*(pinW*0.55),
+          0.07,
+          isX ? footZ + fs*(pinW*0.55) : footZ
+        );
+        g.add(sideFillet);
+      }
     }
   });
 
-  // Status LEDs on top
+  // ── Status LEDs on top ──────────────────────────────────────
   [[W*0.32,-D*0.32,M.ledGreen],[W*0.32,D*0.32,M.ledRed],[-W*0.32,-D*0.32,M.ledYellow]].forEach(([lx,lz,lm])=>{
-    const led=cyl(0.2,0.2,0.1,12,lm);
-    led.position.set(lx,H+0.07,lz);
-    g.add(led);
-    const dome=cyl(0.2,0.12,0.18,12,lm);
-    dome.position.set(lx,H+0.18,lz);
-    g.add(dome);
+    const base=cyl(0.22,0.22,0.09,14,lm);
+    base.position.set(lx,H+0.065,lz); g.add(base);
+    const dome=cyl(0.22,0.14,0.2,14,lm);
+    dome.position.set(lx,H+0.19,lz); g.add(dome);
+    // LED glow halo ring
+    const halo=cyl(0.34,0.38,0.04,14,new THREE.MeshStandardMaterial({
+      color:lm.color, emissive:lm.emissive, emissiveIntensity:0.6,
+      transparent:true, opacity:0.35, roughness:0.1
+    }));
+    halo.position.set(lx,H+0.048,lz); g.add(halo);
   });
 
   scene.add(g);

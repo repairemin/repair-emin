@@ -2,21 +2,23 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>3D Electronic City - Ultra Clarity</title>
+    <title>3D Electronic City - Logic Traces</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87ceeb; } /* Nền trời xanh nhạt như ảnh */
-        .ui {
+        body { margin: 0; overflow: hidden; background: #a3c2d1; }
+        .hud {
             position: absolute; top: 20px; left: 20px;
-            color: #fff; font-family: sans-serif;
-            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
-            pointer-events: none;
+            color: #00ff00; font-family: 'Courier New', monospace;
+            background: rgba(0, 20, 0, 0.8); padding: 15px; 
+            border: 1px solid #00ff00; pointer-events: none;
+            box-shadow: 0 0 15px rgba(0,255,0,0.2);
         }
     </style>
 </head>
 <body>
-    <div class="ui">
-        <b>ELECTRONIC CITY V1.0</b><br>
-        Status: High Visibility Mode
+    <div class="hud">
+        <b>[ STATUS: LOGIC ROUTING ACTIVE ]</b><br>
+        > MAPPING TRACES TO PINS... DONE<br>
+        > SIGNAL INTEGRITY: 100%
     </div>
 
     <script type="importmap">
@@ -26,133 +28,142 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- KHỞI TẠO ---
+        // --- CẤU HÌNH ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xa3c2d1); // Màu trời nhạt
+        scene.background = new THREE.Color(0x8eb3c5);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // --- ÁNH SÁNG (Cực kỳ quan trọng để nhìn rõ như ảnh) ---
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2.5);
-        scene.add(hemiLight);
+        // --- ÁNH SÁNG ---
+        scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+        const sun = new THREE.DirectionalLight(0xffffff, 2);
+        sun.position.set(10, 20, 10);
+        scene.add(sun);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-        dirLight.position.set(10, 20, 10);
-        scene.add(dirLight);
-
-        // --- MẶT NỀN PCB (Xanh lá rực rỡ với đường mạch) ---
-        const pcbGroup = new THREE.Group();
-        const pcbMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.4 });
-        const pcbBase = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), pcbMat);
+        // --- PCB BASE ---
+        const pcbBase = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshStandardMaterial({ color: 0x0a330a, roughness: 0.3 })
+        );
         pcbBase.rotation.x = -Math.PI / 2;
-        pcbGroup.add(pcbBase);
+        scene.add(pcbBase);
 
-        // Vẽ các đường mạch vàng (Traces) rõ ràng
-        const traceMat = new THREE.MeshStandardMaterial({ color: 0x88cc44, metalness: 0.5 });
-        for(let i=0; i<80; i++) {
-            const w = Math.random() > 0.5 ? 0.05 : 0.15;
-            const l = Math.random() * 10 + 2;
-            const trace = new THREE.Mesh(new THREE.PlaneGeometry(w, l), traceMat);
-            trace.rotation.x = -Math.PI / 2;
-            trace.position.set((Math.random()-0.5)*50, 0.01, (Math.random()-0.5)*50);
-            if(Math.random() > 0.5) trace.rotation.z = Math.PI / 2;
-            pcbGroup.add(trace);
+        // --- HÀM VẼ TRACE LOGIC ---
+        const traceMat = new THREE.MeshStandardMaterial({ 
+            color: 0xd4af37, // Màu vàng Gold
+            metalness: 0.8, 
+            roughness: 0.2 
+        });
+
+        function drawTraceFromPin(startX, startZ) {
+            const points = [];
+            let currX = startX;
+            let currZ = startZ;
+            
+            points.push(new THREE.Vector3(currX, 0.02, currZ));
+            
+            // Chạy thẳng ra khỏi linh kiện một chút
+            const dir = Math.random() > 0.5 ? 1 : -1;
+            if(Math.random() > 0.5) currX += 1 * dir; else currZ += 1 * dir;
+            points.push(new THREE.Vector3(currX, 0.02, currZ));
+
+            // Rẽ nhánh 90 độ lần 1
+            if(Math.random() > 0.5) currX += Math.random() * 5 * dir; else currZ += Math.random() * 5 * dir;
+            points.push(new THREE.Vector3(currX, 0.02, currZ));
+
+            // Vẽ đường mạch bằng Tube hoặc dải phẳng (Plane)
+            const path = new THREE.CatmullRomCurve3(points);
+            const geometry = new THREE.TubeGeometry(path, 20, 0.03, 8, false);
+            const mesh = new THREE.Mesh(geometry, traceMat);
+            scene.add(mesh);
         }
-        scene.add(pcbGroup);
 
-        // --- HÀM TẠO LINH KIỆN CHI TIẾT ---
-        function createCapacitor(x, z) {
-            const h = Math.random() * 1.5 + 1;
-            const cap = new THREE.Group();
-            const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.5, 0.5, h, 32),
-                new THREE.MeshStandardMaterial({ color: 0x33aaff }) // Xanh tụ điện rực rỡ
-            );
-            const top = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.5, 0.5, 0.05, 32),
-                new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
-            );
-            top.position.y = h/2;
-            cap.add(body, top);
-            cap.position.set(x, h/2, z);
-            scene.add(cap);
-        }
+        // --- CÁC LINH KIỆN ---
 
+        // 1. Chip IC với chân nối mạch
         function createChip(x, z) {
             const chip = new THREE.Mesh(
-                new THREE.BoxGeometry(2, 0.4, 2),
-                new THREE.MeshStandardMaterial({ color: 0x333333 })
+                new THREE.BoxGeometry(2.5, 0.4, 2.5),
+                new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
             );
-            chip.position.set(x, 0.2, z);
-            // Thêm các chân chip bạc
-            const pinGeo = new THREE.BoxGeometry(0.1, 0.3, 0.1);
-            const pinMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8 });
-            for(let i=-0.8; i<=0.8; i+=0.4) {
-                const p1 = new THREE.Mesh(pinGeo, pinMat); p1.position.set(1.05, -0.1, i);
-                const p2 = new THREE.Mesh(pinGeo, pinMat); p2.position.set(-1.05, -0.1, i);
-                chip.add(p1, p2);
+            chip.position.set(x, 0.21, z);
+            
+            for(let i = -1; i <= 1; i += 0.5) {
+                // Tọa độ chân trái và phải
+                const pins = [
+                    { px: x + 1.4, pz: z + i },
+                    { px: x - 1.4, pz: z + i }
+                ];
+                pins.forEach(p => {
+                    const pinMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.15), new THREE.MeshStandardMaterial({color:0xcccccc, metalness:1}));
+                    pinMesh.position.set(p.px - x, -0.15, p.pz - z);
+                    chip.add(pinMesh);
+                    // Nối Trace từ chân này
+                    drawTraceFromPin(p.px, p.pz);
+                });
             }
             scene.add(chip);
         }
 
-        function createResistor(x, z) {
-            const res = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.8, 16), new THREE.MeshStandardMaterial({color: 0xcccccc}));
-            body.rotation.z = Math.PI/2;
-            // Vạch màu điện trở
-            const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.1, 16), new THREE.MeshStandardMaterial({color: 0xff0000}));
-            ring.position.x = 0.2; ring.rotation.z = Math.PI/2;
-            body.add(ring);
-            res.add(body);
-            res.position.set(x, 0.2, z);
-            scene.add(res);
+        // 2. Transistor TO-92
+        function createTransistor(x, z) {
+            const body = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.3, 0.3, 0.6, 16, 1, false, 0, Math.PI),
+                new THREE.MeshStandardMaterial({ color: 0x000000 })
+            );
+            body.position.set(x, 0.6, z);
+            body.rotation.x = Math.PI;
+            
+            [-0.2, 0, 0.2].forEach(offset => {
+                const pinX = x + offset;
+                const pinZ = z;
+                // Vẽ trace logic từ 3 chân
+                drawTraceFromPin(pinX, pinZ);
+                // Vẽ chân cắm xuống
+                const pinWire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6), new THREE.MeshStandardMaterial({color:0xaaaaaa}));
+                pinWire.position.set(pinX, 0.3, pinZ);
+                scene.add(pinWire);
+            });
+            scene.add(body);
         }
 
-        // Tạo cây xanh (Low poly trees) như trong ảnh
-        function createTree(x, z) {
-            const tree = new THREE.Group();
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5), new THREE.MeshStandardMaterial({color: 0x553311}));
-            const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshStandardMaterial({color: 0x44aa22}));
-            leaves.position.y = 0.5;
-            tree.add(trunk, leaves);
-            tree.position.set(x, 0.25, z);
-            scene.add(tree);
+        // 3. Tụ hóa (Capacitor)
+        function createCap(x, z) {
+            const h = 1.8;
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, h, 32), new THREE.MeshStandardMaterial({color: 0x0077ff}));
+            cap.position.set(x, h/2, z);
+            
+            // 2 chân tụ
+            drawTraceFromPin(x + 0.2, z);
+            drawTraceFromPin(x - 0.2, z);
+            scene.add(cap);
         }
 
-        // Rải linh kiện
-        for(let i=0; i<150; i++) {
+        // --- RẢI LINH KIỆN ---
+        for(let i=0; i<60; i++) {
             const x = (Math.random()-0.5)*40;
             const z = (Math.random()-0.5)*40;
             const r = Math.random();
-            if(r > 0.7) createCapacitor(x, z);
-            else if(r > 0.4) createChip(x, z);
-            else if(r > 0.2) createResistor(x, z);
-            else createTree(x, z);
+            if(r > 0.7) createChip(x, z);
+            else if(r > 0.4) createTransistor(x, z);
+            else createCap(x, z);
         }
 
-        // --- ANIMATION (Góc nhìn thứ nhất bay mượt) ---
+        // --- CAMERA FLY ---
         let time = 0;
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.003;
+            time += 0.002;
 
-            // Camera bay theo đường uốn lượn nhẹ nhàng
-            camera.position.x = Math.sin(time) * 15;
-            camera.position.z = Math.cos(time * 0.7) * 15;
-            camera.position.y = 4 + Math.sin(time * 0.5) * 1.5;
+            camera.position.x = Math.sin(time) * 20;
+            camera.position.z = Math.cos(time * 0.8) * 20;
+            camera.position.y = 5 + Math.sin(time * 0.5) * 2;
 
-            // Luôn nhìn về phía trước
-            const target = new THREE.Vector3(
-                Math.sin(time + 0.5) * 10,
-                0,
-                Math.cos((time + 0.5) * 0.7) * 10
-            );
-            camera.lookAt(target);
-
+            camera.lookAt(0, 0, 0);
             renderer.render(scene, camera);
         }
 

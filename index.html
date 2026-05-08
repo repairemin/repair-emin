@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Electronic City 3D - Ultra Realistic ⚡</title>
+<title>Electronic City 3D ⚡</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; overflow:hidden; font-family:'Courier New',monospace; }
@@ -93,7 +93,7 @@ canvas { display:block; }
     <div class="li"><div class="ld" style="background:#9090ee;box-shadow:0 0 6px #6666cc"></div>IC CHIP — City Center</div>
     <div class="li"><div class="ld" style="background:#66bbdd;box-shadow:0 0 6px #3388bb"></div>Capacitor — Skyscraper</div>
     <div class="li"><div class="ld" style="background:#cc8833;box-shadow:0 0 6px #aa6622"></div>Resistor — Building</div>
-    <div class="li"><div class="ld" style="background:#cc3322;box-shadow:0 0 6px #aa2211"></div>Diode — Power Gate</div>
+    <div class="li"><div class="ld" style="background:#cc3322;box-shadow:0 0 6px #aa2211"></div>Diode — Shop</div>
     <div class="li"><div class="ld" style="background:#8844cc;box-shadow:0 0 6px #6622aa"></div>Transistor — Factory</div>
     <div class="li"><div class="ld" style="background:#997733;box-shadow:0 0 6px #775522"></div>Transformer — Power Stn</div>
     <div class="li"><div class="ld" style="background:#33aa55;box-shadow:0 0 6px #118833"></div>Ceramic Cap — Tree</div>
@@ -117,6 +117,7 @@ const loadInterval = setInterval(() => {
   loadFill.style.width = loadPct+'%';
 }, 120);
 
+// ── RENDERER ────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight);
@@ -140,7 +141,9 @@ window.addEventListener('resize',()=>{
   renderer.setSize(innerWidth,innerHeight);
 });
 
+// ── LIGHTS ──────────────────────────────────────────────────
 scene.add(new THREE.AmbientLight(0x112208, 0.9));
+
 const sun = new THREE.DirectionalLight(0x99ffcc, 1.1);
 sun.position.set(40,70,30);
 sun.castShadow = true;
@@ -162,6 +165,7 @@ scene.add(chipGlow);
   scene.add(l);
 });
 
+// ── MATERIALS ───────────────────────────────────────────────
 function mat(color,rough,metal,emissive,emI){
   return new THREE.MeshStandardMaterial({
     color, roughness:rough??0.5, metalness:metal??0,
@@ -175,188 +179,769 @@ const M = {
   via:      mat(0xddbb44,0.2,0.9),
   solder:   mat(0xd4d0a8,0.18,0.82,0x221f00,0.05),
   leg:      mat(0xd8d8e8,0.12,0.97),
+
   chipBody: mat(0x1c1c38,0.45,0.25),
   chipTop:  mat(0x141428,0.35,0.15),
   chipDie:  mat(0x2a2a88,0.2,0.2,0x111166,0.9),
   chipMark: mat(0xaaaaff,0.8,0,0x4444cc,0.5),
+
   capBody:  mat(0x1a4466,0.3,0.35),
   capMetal: mat(0x99bbcc,0.2,0.8),
   capStrip: mat(0xf0f0f0,0.6),
+
   resBody:  mat(0xaa7733,0.75),
   resCap:   mat(0xddccaa,0.35,0.6),
-  diode:    mat(0x771a0a,0.1,0.2,0x330600,0.4), // New Glassy Mat
-  diodeBand:mat(0xdddddd,0.4,0.1),
+
+  diode:    mat(0x771a0a,0.3,0.15,0x330600,0.6),
+  diodeBand:mat(0xeeeeee,0.5),
+
   npn:      mat(0x111111,0.25,0.5),
   npnBase:  mat(0x1a1a1a,0.2,0.65),
   npnLabel: mat(0xdddddd,0.9),
+
   xCore:    mat(0x222222,0.5,0.55),
   xCoilA:   mat(0xcc9922,0.25,0.75),
   xCoilB:   mat(0x7733bb,0.25,0.75),
   xBase:    mat(0x2a2a2a,0.5,0.4),
+
   treeDisc: mat(0x22aa44,0.65,0,0x0a3318,0.4),
   treeStem: mat(0x557733,0.8),
+
   ledGreen: mat(0x00ff88,0.1,0,0x00ff88,2),
   ledRed:   mat(0xff3300,0.1,0,0xff3300,2),
   ledYellow:mat(0xffcc00,0.1,0,0xffcc00,2),
 };
 
-const BAND_MATS = [0xff2222,0xff8800,0xffff22,0x22ff22,0x2255ff,0xcc22ff,0xffffff,0x888888,0x222222].map(c=>mat(c,0.5));
+// Band materials
+const BAND_MATS = [0xff2222,0xff8800,0xffff22,0x22ff22,0x2255ff,0xcc22ff,0xffffff,0x888888,0x222222]
+  .map(c=>mat(c,0.5));
 
+// ── PRIMITIVES ──────────────────────────────────────────────
 function box(w,h,d,m){ const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); mesh.castShadow=true; mesh.receiveShadow=true; return mesh; }
 function cyl(rt,rb,h,seg,m){ const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m); mesh.castShadow=true; mesh.receiveShadow=true; return mesh; }
+function add(parent,...children){ children.forEach(c=>parent.add(c)); }
 
 function solder(parent,x,z,size){
   const sz=size||1;
+  // PCB copper pad underneath
   const pad=box(sz*0.55,0.04,sz*0.55,M.trace);
   pad.position.set(x,0.022,z); parent.add(pad);
+  // Solder fillet — meniscus shape (wide base, narrow top)
   const base=cyl(sz*0.24,sz*0.28,0.09,12,M.solder);
   base.position.set(x,0.045,z); parent.add(base);
+  // Middle meniscus
   const mid=cyl(sz*0.16,sz*0.24,0.09,12,M.solder);
   mid.position.set(x,0.11,z); parent.add(mid);
+  // Top fillet peak
   const tip=cyl(sz*0.07,sz*0.16,0.07,10,M.solder);
   tip.position.set(x,0.175,z); parent.add(tip);
+  // Subtle oxidation sheen ring
+  const sheen=cyl(sz*0.29,sz*0.31,0.035,12,mat(0xddddbb,0.15,0.8));
+  sheen.position.set(x,0.038,z); parent.add(sheen);
 }
 
+// ── PCB ─────────────────────────────────────────────────────
 function buildPCB(){
   const g=new THREE.Group();
   const board=box(95,0.7,95,M.pcb);
-  board.position.y=-0.35; board.receiveShadow=true;
+  board.position.y=-0.35; board.receiveShadow=true; board.castShadow=false;
   g.add(board);
+
   function trace(x1,z1,x2,z2,w=0.2){
     const dx=x2-x1,dz=z2-z1,len=Math.sqrt(dx*dx+dz*dz);
+    if(len<0.01)return;
     const t=box(w,0.05,len,M.trace);
     t.position.set((x1+x2)/2,0.025,(z1+z2)/2);
     t.rotation.y=Math.atan2(dx,dz);
     g.add(t);
+    [[x1,z1],[x2,z2]].forEach(([vx,vz])=>{
+      const v=cyl(0.24,0.24,0.09,10,M.via);
+      v.position.set(vx,0.03,vz); g.add(v);
+      const h2=cyl(0.11,0.11,0.13,8,M.solder);
+      h2.position.set(vx,0.01,vz); g.add(h2);
+    });
   }
+
+  // Main buses
   [-12,-6,0,6,12].forEach(z=>trace(-40,z,40,z,0.25));
   [-12,-6,0,6,12].forEach(x=>trace(x,-40,x,40,0.25));
+  // Secondary
+  [-9,-3,3,9].forEach(z=>trace(-30,z,30,z,0.13));
+  [-9,-3,3,9].forEach(x=>trace(x,-30,x,30,0.13));
+  // Diagonals
+  [[-25,-25,-14,-14],[25,-25,14,-14],[-25,25,-14,14],[25,25,14,14]].forEach(([a,b,c,d])=>trace(a,b,c,d,0.15));
+  // Perimeter pads
+  for(let i=-4;i<=4;i++){
+    [[-46,i*5.5],[46,i*5.5],[i*5.5,-46],[i*5.5,46]].forEach(([px,pz])=>{
+      const pad=box(1.8,0.06,1.4,M.trace);
+      pad.position.set(px,0.03,pz); g.add(pad);
+    });
+  }
   scene.add(g);
 }
 
+// ── IC CHIP (QFP ultra-realistic) ───────────────────────────
 function buildChip(cx,cz){
   const g=new THREE.Group(); g.position.set(cx,0,cz);
-  const W=11,H=2.4,D=11;
-  const body=box(W,H,D,M.chipBody); body.position.y=H/2; g.add(body);
-  const silk=box(W*0.94,0.04,D*0.94,M.chipTop); silk.position.y=H+0.021; g.add(silk);
-  scene.add(g); return g;
+  const W=11,D=11,H=2.4;
+
+  // ── Thermal pad on PCB (exposed copper, slightly recessed) ──
+  const thermalPad=box(W*0.72,0.055,D*0.72,mat(0xd4a017,0.18,0.9,0x443300,0.15));
+  thermalPad.position.set(0,0.028,0); g.add(thermalPad);
+  // Pad grid (solder mask openings)
+  for(let pi=-1;pi<=1;pi++) for(let pj=-1;pj<=1;pj++){
+    const pm=box(1.6,0.065,1.6,mat(0xe8b820,0.12,0.95));
+    pm.position.set(pi*1.9,0.033,pj*1.9); g.add(pm);
+  }
+  // Thermal via holes on pad
+  for(let vi=-1;vi<=1;vi++) for(let vj=-1;vj<=1;vj++){
+    const via=cyl(0.18,0.18,0.08,10,M.via);
+    via.position.set(vi*1.9,0.04,vj*1.9); g.add(via);
+  }
+
+  // ── Main chip body ──────────────────────────────────────────
+  const body=box(W,H,D,M.chipBody);
+  body.position.y=H/2; g.add(body);
+
+  // Beveled bottom edge (chamfer lines around base)
+  [[-1,0],[1,0],[0,-1],[0,1]].forEach(([sx,sz])=>{
+    const ch=box(sx?0.18:W+0.1,0.22,sz?0.18:D+0.1,mat(0x101025,0.5,0.4));
+    ch.position.set(sx*(W/2-0.05),0.11,sz*(D/2-0.05)); g.add(ch);
+  });
+
+  // Top bevel edge ring
+  const bevelTop=box(W+0.08,0.12,D+0.08,mat(0x2a2a4a,0.38,0.3));
+  bevelTop.position.y=H-0.04; g.add(bevelTop);
+
+  // ── Epoxy top surface ───────────────────────────────────────
+  const silk=box(W*0.94,0.04,D*0.94,M.chipTop);
+  silk.position.y=H+0.021; g.add(silk);
+
+  // Silk-screen rectangle frame on top
+  [[W*0.88,0.025,0.12],[0.12,0.025,D*0.88]].forEach(([sw,sh,sd])=>{
+    for(const sx of [-W*0.44,W*0.44]){
+      const sl=box(sw,sh,sd,mat(0xffffff,0.85,0,0xaaaaff,0.06));
+      sl.position.set(0,H+0.04,sx*(D/W)); g.add(sl);
+    }
+  });
+  const fr1=box(W*0.88,0.025,0.12,mat(0xffffff,0.85,0,0xaaaaff,0.06));
+  fr1.position.set(0,H+0.04,-D*0.44); g.add(fr1);
+  const fr2=fr1.clone(); fr2.position.set(0,H+0.04,D*0.44); g.add(fr2);
+  const fr3=box(0.12,0.025,D*0.88,mat(0xffffff,0.85,0,0xaaaaff,0.06));
+  fr3.position.set(-W*0.44,H+0.04,0); g.add(fr3);
+  const fr4=fr3.clone(); fr4.position.set(W*0.44,H+0.04,0); g.add(fr4);
+
+  // ── Die window (exposed silicon) ───────────────────────────
+  const die=box(W*0.46,0.07,D*0.46,M.chipDie);
+  die.position.y=H+0.035; g.add(die);
+
+  // Die internal circuit grid (metal layer lines)
+  for(let i=-3;i<=3;i++){
+    const hl=box(W*0.44,0.03,0.05,mat(0x5555cc,0.25,0.1,0x2222bb,0.45));
+    hl.position.set(0,H+0.075,i*0.32); g.add(hl);
+    const vl=box(0.05,0.03,D*0.44,mat(0x5555cc,0.25,0.1,0x2222bb,0.45));
+    vl.position.set(i*0.32,H+0.075,0); g.add(vl);
+  }
+  // Diagonal metal routing lines (more realistic)
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI;
+    const rl=box(W*0.38,0.025,0.04,mat(0x7777dd,0.2,0.2,0x3333bb,0.3));
+    rl.position.set(0,H+0.08,0); rl.rotation.y=a; g.add(rl);
+  }
+  // Bright metal contact pads on die edge
+  for(let i=-2;i<=2;i++){
+    [[W*0.22,i*0.3],[- W*0.22,i*0.3],[i*0.3,D*0.22],[i*0.3,-D*0.22]].forEach(([px,pz])=>{
+      const pad=box(0.14,0.04,0.14,mat(0xddddff,0.1,0.6,0x8888ee,0.8));
+      pad.position.set(px,H+0.08,pz); g.add(pad);
+    });
+  }
+
+  // ── Pin-1 indicator (notch + circle) ───────────────────────
+  const notch=box(0.5,0.12,0.5,mat(0x080818,0.3));
+  notch.position.set(-W*0.45,H+0.015,-D*0.45); g.add(notch);
+  const p1dot=cyl(0.28,0.28,0.055,16,mat(0xccccff,0.7,0,0x6666dd,0.5));
+  p1dot.position.set(-W*0.37,H+0.045,-D*0.37); g.add(p1dot);
+
+  // ── Bond wires (curved arc from die pad to package pad) ────
+  const bondMat=mat(0xffdd88,0.1,0.9,0xcc9900,0.2);
+  for(let i=0;i<16;i++){
+    const a=(i/16)*Math.PI*2;
+    const r0=1.0, r1=2.4;
+    const curve=new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(Math.cos(a)*r0, H+0.07, Math.sin(a)*r0),
+      new THREE.Vector3(Math.cos(a)*((r0+r1)/2), H+0.9+Math.random()*0.3, Math.sin(a)*((r0+r1)/2)),
+      new THREE.Vector3(Math.cos(a)*r1, H+0.065, Math.sin(a)*r1)
+    );
+    const wire=new THREE.Mesh(new THREE.TubeGeometry(curve,16,0.022,5),bondMat);
+    g.add(wire);
+    // Die bond pad
+    const bp=box(0.12,0.035,0.12,mat(0xffee99,0.1,0.9));
+    bp.position.set(Math.cos(a)*r0,H+0.072,Math.sin(a)*r0); g.add(bp);
+  }
+
+  // ── QFP PINS — 4 sides × 11 pins, true gull-wing geometry ──
+  const pinN=11;
+  const pinSpan=D*0.84;
+  const pinSpacing=pinSpan/(pinN-1);
+  const pinW=0.14;    // pin width
+  const pinT=0.09;    // pin thickness
+  const bodyOvhg=0.0; // how far stub starts from body edge
+  const gullH=0.9;    // vertical drop height
+  const gullExt=1.75; // how far foot extends outward from body
+  const footLen=1.1;  // length of flat solder foot
+
+  const pinMat=mat(0xc0c0d8,0.15,0.9,0x000000,0);
+  const pinSideMat=mat(0xa0a0c0,0.2,0.85);
+
+  const sides=[
+    {axis:'x',sign:-1},
+    {axis:'x',sign: 1},
+    {axis:'z',sign:-1},
+    {axis:'z',sign: 1},
+  ];
+
+  sides.forEach(({axis,sign})=>{
+    const isX = axis==='x';
+    for(let i=0;i<pinN;i++){
+      const offset = -pinSpan/2 + i*pinSpacing;
+
+      // Base x,z position of pin at package edge
+      const edgeX = isX ? sign*(W/2) : offset;
+      const edgeZ = isX ? offset      : sign*(D/2);
+
+      // ── Segment 1: vertical stub down from package underside ─
+      // Runs from y=0.1 (package bottom) down to y=(H-gullH)
+      const stubH = H - 0.4;
+      const stubMesh = box(
+        isX ? pinT : pinW,
+        stubH,
+        isX ? pinW : pinT,
+        pinMat
+      );
+      stubMesh.position.set(
+        isX ? edgeX + sign*0.05 : edgeX,
+        H - stubH/2 - 0.15,
+        isX ? edgeZ             : edgeZ + sign*0.05
+      );
+      g.add(stubMesh);
+
+      // ── Segment 2: curved knee (gull-wing bend outward) ─────
+      // Approximate with 4 small rotated boxes forming an arc
+      const kneePts=5;
+      for(let k=0;k<kneePts;k++){
+        const t=k/(kneePts-1);
+        const ang=(t-0.5)*Math.PI*0.52; // sweep 94°
+        const kr=0.38;
+        // Center of knee arc
+        const kCX = isX ? edgeX + sign*(W*0.02 + kr) : edgeX;
+        const kCZ = isX ? edgeZ                        : edgeZ + sign*(D*0.02 + kr);
+        const kY  = gullH - 0.18;
+        const px = isX ? kCX + Math.sin(ang)*kr*sign - sign*kr : kCX;
+        const pz = isX ? kCZ                                    : kCZ + Math.sin(ang)*kr*sign - sign*kr;
+        const py  = kY + Math.cos(ang)*kr - kr + 0.2;
+        const seg=box(
+          isX ? pinT*1.05 : pinW,
+          pinT*1.05,
+          isX ? pinW      : pinT*1.05,
+          pinMat
+        );
+        seg.position.set(
+          isX ? edgeX+sign*(kr*(1-Math.cos(ang+Math.PI/2))+0.05) : edgeX,
+          gullH - kr + kr*Math.sin(t*Math.PI*0.5) + 0.08,
+          isX ? edgeZ : edgeZ+sign*(kr*(1-Math.cos(ang+Math.PI/2))+0.05)
+        );
+        g.add(seg);
+      }
+
+      // ── Segment 3: horizontal foot (flat on PCB) ─────────────
+      const footX = isX ? edgeX + sign*(W/2*0.06 + gullExt - footLen/2) : edgeX;
+      const footZ = isX ? edgeZ                                           : edgeZ + sign*(D/2*0.06 + gullExt - footLen/2);
+      const foot=box(
+        isX ? footLen : pinW,
+        pinT*0.9,
+        isX ? pinW   : footLen,
+        pinMat
+      );
+      foot.position.set(footX, 0.065, footZ);
+      g.add(foot);
+
+      // ── PCB copper pad under foot ─────────────────────────────
+      const padX = isX ? edgeX + sign*(W/2*0.06 + gullExt) : edgeX;
+      const padZ = isX ? edgeZ                              : edgeZ + sign*(D/2*0.06 + gullExt);
+      const cpPad=box(
+        isX ? footLen+0.18 : pinW+0.18,
+        0.05,
+        isX ? pinW+0.18   : footLen+0.18,
+        mat(0xd4a020,0.18,0.9)
+      );
+      cpPad.position.set(padX, 0.025, padZ); g.add(cpPad);
+
+      // ── Solder fillet — meniscus at toe, heel, and flanks ────
+      // Toe fillet
+      const toeSX = isX ? edgeX + sign*(W/2*0.06 + gullExt + footLen/2 - 0.08) : edgeX;
+      const toeSZ = isX ? edgeZ : edgeZ + sign*(D/2*0.06 + gullExt + footLen/2 - 0.08);
+      const toeFillet=cyl(pinW*0.7, pinW*0.95, 0.19, 10, M.solder);
+      toeFillet.position.set(toeSX, 0.085, toeSZ); g.add(toeFillet);
+      const toeSheen=cyl(pinW*0.98, pinW*1.0, 0.05, 10, mat(0xe0ddc0,0.12,0.85));
+      toeSheen.position.set(toeSX, 0.025, toeSZ); g.add(toeSheen);
+
+      // Heel fillet (at body edge)
+      const heelDX = isX ? sign*( W/2 + 0.2) : 0;
+      const heelDZ = isX ? 0                  : sign*(D/2 + 0.2);
+      const heelFillet=cyl(pinW*0.55, pinW*0.8, 0.24, 10, M.solder);
+      heelFillet.position.set(edgeX+heelDX*0.35, 0.18, edgeZ+heelDZ*0.35); g.add(heelFillet);
+
+      // Side fillets
+      for(const fs of [-1,1]){
+        const sideFillet=cyl(pinT*0.5, pinT*0.7, 0.14, 8, M.solder);
+        sideFillet.position.set(
+          isX ? footX : footX + fs*(pinW*0.55),
+          0.07,
+          isX ? footZ + fs*(pinW*0.55) : footZ
+        );
+        g.add(sideFillet);
+      }
+    }
+  });
+
+  // ── Status LEDs on top ──────────────────────────────────────
+  [[W*0.32,-D*0.32,M.ledGreen],[W*0.32,D*0.32,M.ledRed],[-W*0.32,-D*0.32,M.ledYellow]].forEach(([lx,lz,lm])=>{
+    const base=cyl(0.22,0.22,0.09,14,lm);
+    base.position.set(lx,H+0.065,lz); g.add(base);
+    const dome=cyl(0.22,0.14,0.2,14,lm);
+    dome.position.set(lx,H+0.19,lz); g.add(dome);
+    // LED glow halo ring
+    const halo=cyl(0.34,0.38,0.04,14,new THREE.MeshStandardMaterial({
+      color:lm.color, emissive:lm.emissive, emissiveIntensity:0.6,
+      transparent:true, opacity:0.35, roughness:0.1
+    }));
+    halo.position.set(lx,H+0.048,lz); g.add(halo);
+  });
+
+  scene.add(g);
+  return g;
 }
 
+// ── CAPACITOR (electrolytic, through-hole) ───────────────────
 function buildCap(cx,cz,height,radius){
   const g=new THREE.Group(); g.position.set(cx,0,cz);
-  const body=cyl(radius,radius,height,24,M.capBody); body.position.y=height/2; g.add(body);
-  solder(g,-radius*0.3,0); solder(g,radius*0.3,0);
-  scene.add(g); return g;
-}
+  const S=24;
 
-function buildRes(cx,cz,angle,bands){
-  const g=new THREE.Group(); g.position.set(cx,0,cz); g.rotation.y=angle||0;
-  const len=3.2,rad=0.48,h=0.7;
-  const body=cyl(rad,rad,len,20,M.resBody); body.rotation.z=Math.PI/2; body.position.set(0,h,0); g.add(body);
-  [-1,1].forEach(side=>{
-    const vLead=box(0.09,h,0.09,M.leg); vLead.position.set(side*(len/2+2.2),h/2,0); g.add(vLead);
-    solder(g,side*(len/2+2.2),0);
+  const body=cyl(radius,radius,height,S,M.capBody);
+  body.position.y=height/2; g.add(body);
+
+  // Negative stripe sleeve
+  const sleeve=cyl(radius+0.04,radius+0.04,height*0.92,S,M.capStrip);
+  // use clip to only show one sector — approximate with thin box overlay
+  const stripeBox=box(radius*0.7,height*0.9,0.06,M.capStrip);
+  stripeBox.position.set(0,height/2,radius+0.04); g.add(stripeBox);
+  // Minus symbols
+  for(let i=0;i<5;i++){
+    const m=box(radius*0.45,0.05,0.07,mat(0x0000aa,0.8));
+    m.position.set(0,height*0.12+i*(height*0.16),radius+0.07);
+    g.add(m);
+  }
+
+  // Aluminium top rim
+  const rim=cyl(radius+0.06,radius+0.06,0.12,S,M.capMetal);
+  rim.position.y=height-0.06; g.add(rim);
+  const topDisk=cyl(radius*0.96,radius*0.96,0.1,S,M.capMetal);
+  topDisk.position.y=height+0.03; g.add(topDisk);
+
+  // Vent cross on top
+  [0,1].forEach(r=>{
+    const vent=box(r?0.13:radius*1.6,0.04,r?radius*1.6:0.13,M.capStrip);
+    vent.position.set(0,height+0.07,0); g.add(vent);
   });
+
+  // Bottom plastic base ring
+  const base=cyl(radius+0.1,radius+0.1,0.2,S,mat(0x111111,0.6));
+  base.position.y=0.1; g.add(base);
+
+  // 2 PINS (+/-)
+  [[-radius*0.3,0],[radius*0.3,0]].forEach(([ox,oz],idx)=>{
+    const pinH=2.5;
+    const pin=cyl(0.07,0.07,pinH,8,M.leg);
+    pin.position.set(ox,-pinH/2+0.12,oz); g.add(pin);
+    // PCB solder
+    solder(g,ox,oz);
+    const knob=cyl(0.11,0.11,0.15,8,M.solder);
+    knob.position.set(ox,-pinH+0.22,oz); g.add(knob);
+  });
+
+  // Emissive top glow led
+  const led=cyl(0.12,0.08,0.12,8,M.ledGreen);
+  led.position.set(0,height+0.14,0); g.add(led);
+
   scene.add(g); return g;
 }
 
-// ── DIODE (Vá Diode thật vào đây) ─────────────────────────────────
+// ── RESISTOR (axial, through-hole) ───────────────────────────
+function buildRes(cx,cz,angle,bands){
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  g.rotation.y=angle||0;
+  const len=3.2,rad=0.48,S=20;
+  const h=0.7; // stand height above pcb
+
+  const body=cyl(rad,rad,len,S,M.resBody);
+  body.rotation.z=Math.PI/2;
+  body.position.set(0,h,0); g.add(body);
+
+  // End caps
+  [-len/2,len/2].forEach(x=>{
+    const c=cyl(rad+0.06,rad+0.06,0.24,S,M.resCap);
+    c.rotation.z=Math.PI/2; c.position.set(x,h,0); g.add(c);
+  });
+
+  // Color bands
+  (bands||[0,1,2,3]).forEach((bi,i)=>{
+    const bm=BAND_MATS[bi%BAND_MATS.length];
+    const band=cyl(rad+0.07,rad+0.07,0.24,S,bm);
+    band.rotation.z=Math.PI/2;
+    band.position.set(-len/2+0.55+i*0.62,h,0);
+    g.add(band);
+  });
+
+  // Axial leads
+  const leadExt=2.2;
+  [-1,1].forEach(side=>{
+    // horizontal
+    const hLead=box(leadExt,0.09,0.09,M.leg);
+    hLead.position.set(side*(len/2+leadExt/2),h,0); g.add(hLead);
+    // vertical down
+    const vLead=box(0.09,h,0.09,M.leg);
+    vLead.position.set(side*(len/2+leadExt),h/2,0); g.add(vLead);
+    solder(g,side*(len/2+leadExt),0);
+  });
+
+  scene.add(g); return g;
+}
+
+// ── DIODE (glass, axial) ─────────────────────────────────────
 function buildDiode(cx,cz,angle){
   const g=new THREE.Group(); g.position.set(cx,0,cz);
   g.rotation.y=angle||0;
-  const len=2.8, rad=0.45, h=0.7; 
+  const len=2.6,rad=0.4,S=20,h=0.65;
 
-  // Thân Diode (Glassy)
-  const body = cyl(rad, rad, len, 24, M.diode);
-  body.rotation.z = Math.PI/2; body.position.set(0, h, 0); g.add(body);
+  const body=cyl(rad,rad,len,S,M.diode);
+  body.rotation.z=Math.PI/2; body.position.set(0,h,0); g.add(body);
 
-  // Vạch Cathode
-  const band = cyl(rad + 0.02, rad + 0.02, 0.35, 24, M.diodeBand);
-  band.rotation.z = Math.PI/2; band.position.set(len*0.3, h, 0); g.add(band);
+  // Glass highlights
+  const gloss=cyl(rad*0.4,rad*0.4,len*0.8,S,mat(0xff6644,0.05,0.1,0xff3300,0.4));
+  gloss.rotation.z=Math.PI/2; gloss.position.set(0,h,rad*0.6); g.add(gloss);
 
-  // Chân uốn cong (Mechanical Leads)
-  const leadExt = 1.8;
-  [-1,1].forEach(side => {
-    const hLead = box(leadExt, 0.08, 0.08, M.leg);
-    hLead.position.set(side*(len/2 + leadExt/2), h, 0); g.add(hLead);
-    const vLead = box(0.08, h, 0.08, M.leg);
-    vLead.position.set(side*(len/2 + leadExt), h/2, 0); g.add(vLead);
-    solder(g, side*(len/2 + leadExt), 0);
+  // Cathode band
+  const band=cyl(rad+0.06,rad+0.06,0.28,S,M.diodeBand);
+  band.rotation.z=Math.PI/2; band.position.set(len*0.32,h,0); g.add(band);
+
+  // End caps
+  [-len/2,len/2].forEach(x=>{
+    const ec=cyl(rad+0.04,rad+0.04,0.18,S,M.capMetal);
+    ec.rotation.z=Math.PI/2; ec.position.set(x,h,0); g.add(ec);
   });
 
-  // Ánh sáng Forward Bias hắt xuống board
-  const gl = new THREE.PointLight(0xff3300, 0.6, 5);
-  gl.position.set(0, h+0.2, 0); g.add(gl);
+  // Leads
+  const leadL=2.0;
+  [-1,1].forEach(side=>{
+    const hl=box(leadL,0.08,0.08,M.leg);
+    hl.position.set(side*(len/2+leadL/2),h,0); g.add(hl);
+    const vl=box(0.08,h,0.08,M.leg);
+    vl.position.set(side*(len/2+leadL),h/2,0); g.add(vl);
+    solder(g,side*(len/2+leadL),0);
+  });
+
+  // Forward-bias glow
+  const gl=new THREE.PointLight(0xff4400,0.5,6);
+  gl.position.set(0,1.2,0); g.add(gl);
 
   scene.add(g); return g;
 }
 
+// ── TRANSISTOR (TO-92) ───────────────────────────────────────
 function buildTransistor(cx,cz,angle){
-  const g=new THREE.Group(); g.position.set(cx,0,cz); g.rotation.y=angle||0;
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  g.rotation.y=angle||0;
   const rad=0.72,H=1.8;
-  const body=box(rad*2,H,rad,M.npn); body.position.y=H/2+0.1; g.add(body);
-  solder(g,-0.38,0); solder(g,0,0); solder(g,0.38,0);
+
+  // Half-cylinder body (flat face front)
+  const bodyG=new THREE.CylinderGeometry(rad,rad*1.05,H,24,1,false,0,Math.PI);
+  const body=new THREE.Mesh(bodyG,M.npn); body.castShadow=true;
+  body.position.y=H/2+0.1; body.rotation.y=Math.PI/2;
+  g.add(body);
+
+  // Flat face
+  const flat=new THREE.Mesh(new THREE.PlaneGeometry(rad*2,H),M.npnBase);
+  flat.position.set(0,H/2+0.1,0); flat.rotation.y=Math.PI; g.add(flat);
+
+  // Part number label
+  const label=new THREE.Mesh(new THREE.PlaneGeometry(rad*1.6,0.28),M.npnLabel);
+  label.position.set(0,H*0.62,-0.01); g.add(label);
+
+  // Small LED on top
+  const led=cyl(0.14,0.14,0.12,10,M.ledGreen);
+  led.position.set(0,H+0.12,0); g.add(led);
+
+  // Rounded bottom
+  const bottom=cyl(rad*1.05,rad*1.1,0.18,24,M.npnBase);
+  bottom.position.y=0.14; g.add(bottom);
+
+  // 3 LEGS: E, B, C spaced 0.38 apart
+  const legH=2.2, legSpacing=0.38;
+  [-legSpacing,0,legSpacing].forEach((ox,idx)=>{
+    const pin=cyl(0.065,0.065,legH,8,M.leg);
+    pin.position.set(ox,-legH/2+0.12,0); g.add(pin);
+    // slight forward taper
+    const foot=box(0.08,0.12,0.12,M.solder);
+    foot.position.set(ox,-legH+0.22,0.06); g.add(foot);
+    solder(g,ox,0);
+  });
+
   scene.add(g); return g;
 }
 
+// ── TRANSFORMER (EI core) ────────────────────────────────────
 function buildTransformer(cx,cz){
   const g=new THREE.Group(); g.position.set(cx,0,cz);
-  const core=box(6.5,2.5,5,M.xCore); core.position.y=1.5; g.add(core);
-  [[-2.5,0,-2],[2.5,0,2]].forEach(([ox,oy,oz])=>solder(g,ox,oz));
-  scene.add(g); return g;
-}
 
-function buildTree(cx,cz,scale){
-  const g=new THREE.Group(); g.position.set(cx,0,cz); g.scale.setScalar(scale||1);
-  const stem=cyl(0.1,0.1,1.3,8,M.treeStem); stem.position.y=0.65; g.add(stem);
-  const disc=box(1.8,0.4,1.8,M.treeDisc); disc.position.y=1.5; g.add(disc);
-  solder(g,-0.2,0); solder(g,0.2,0);
-  scene.add(g); return g;
-}
+  // Base plate
+  const base=box(7,0.55,5.5,M.xBase); base.position.y=0.28; g.add(base);
 
-const PARTS=[];
-const pGeo=new THREE.BufferGeometry();
-const pPos=new Float32Array(350*3);
-pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-const pSys=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x00ffaa,size:0.25}));
-scene.add(pSys);
-
-function updateParts(){
-  for(let i=0; i<350; i++){
-    pPos[i*3] = (Math.random()-0.5)*90;
-    pPos[i*3+1] = 0.1;
-    pPos[i*3+2] = (Math.random()-0.5)*90;
+  // E-core laminations (6 plates)
+  for(let i=0;i<7;i++){
+    const plate=box(6.5,0.28,5.0,M.xCore); plate.position.y=0.56+i*0.29; g.add(plate);
   }
+  // Core center post (fills window)
+  const post=box(1.6,2.1,4.2,M.xCore); post.position.set(0,1.6,0); g.add(post);
+
+  // Primary winding — copper coil
+  const cR=1.2,cH=1.9,turns=16;
+  for(let i=0;i<turns;i++){
+    const t=i/(turns-1);
+    const wire=cyl(cR,cR,0.1,18,M.xCoilA);
+    wire.position.set(-1.8, 0.56+t*cH, 0); g.add(wire);
+  }
+  // Secondary winding — purple
+  for(let i=0;i<turns;i++){
+    const t=i/(turns-1);
+    const wire=cyl(cR,cR,0.1,18,M.xCoilB);
+    wire.position.set(1.8, 0.56+t*cH, 0); g.add(wire);
+  }
+
+  // Top I-core cover
+  const cover=box(6.5,0.28,5.0,M.xCore); cover.position.y=0.56+7*0.29; g.add(cover);
+  const topPlate=box(7,0.3,5.5,M.xBase); topPlate.position.y=3.1; g.add(topPlate);
+
+  // Lead-out wires primary
+  [[-2.5,0,-2],[-2.5,0,0],[-2.5,0,2]].forEach(([ox,oy,oz])=>{
+    const pin=cyl(0.08,0.08,2.4,8,M.leg);
+    pin.position.set(ox,-0.9,oz); g.add(pin);
+    solder(g,ox,oz);
+  });
+  // Secondary leads
+  [[2.5,0,-2],[2.5,0,0],[2.5,0,2]].forEach(([ox,oy,oz])=>{
+    const pin=cyl(0.08,0.08,2.4,8,M.leg);
+    pin.position.set(ox,-0.9,oz); g.add(pin);
+    solder(g,ox,oz);
+  });
+
+  // Arc glow
+  const arc=new THREE.PointLight(0xffcc44,1.5,16);
+  arc.position.set(0,5,0); g.add(arc);
+
+  scene.add(g); return g;
+}
+
+// ── CERAMIC CAP TREE ────────────────────────────────────────
+function buildTree(cx,cz,scale){
+  const g=new THREE.Group(); g.position.set(cx,0,cz);
+  g.scale.setScalar(scale||1);
+
+  const stem=cyl(0.1,0.15,1.3,8,M.treeStem);
+  stem.position.y=0.65; g.add(stem);
+
+  // Flat ceramic disc (oblate sphere)
+  const dG=new THREE.SphereGeometry(0.95,22,12);
+  dG.scale(1,0.42,1);
+  const disc=new THREE.Mesh(dG,M.treeDisc);
+  disc.position.y=1.5; disc.castShadow=true; g.add(disc);
+
+  // Outer ridge ring (ceramic style)
+  const ridge=cyl(0.7,0.65,0.1,20,mat(0x44cc66,0.55,0,0x116633,0.3));
+  ridge.position.y=1.54; g.add(ridge);
+
+  // 2 through-hole legs
+  [[-0.2,0],[0.2,0]].forEach(([ox,oz])=>{
+    const pin=cyl(0.06,0.06,1.5,8,M.leg);
+    pin.position.set(ox,-0.6,oz); g.add(pin);
+    solder(g,ox,oz);
+  });
+
+  // LED on top
+  const led=cyl(0.09,0.06,0.12,8,M.ledGreen);
+  led.position.set(0,1.92,0); g.add(led);
+
+  scene.add(g); return g;
+}
+
+// ── PARTICLES ────────────────────────────────────────────────
+const PARTS=[];
+const MAX_P=350;
+const pGeo=new THREE.BufferGeometry();
+const pPos=new Float32Array(MAX_P*3);
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+
+// Two-color particle materials
+const pMatGreen=new THREE.PointsMaterial({color:0x00ffaa,size:0.28,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false});
+const pMatGold =new THREE.PointsMaterial({color:0xffcc00,size:0.22,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending,depthWrite:false});
+const pSysG=new THREE.Points(pGeo,pMatGreen); scene.add(pSysG);
+
+const TPATHS=[
+  {x1:-40,z1:0,  x2:40, z2:0  },
+  {x1:-40,z1:6,  x2:40, z2:6  },
+  {x1:-40,z1:-6, x2:40, z2:-6 },
+  {x1:0,  z1:-40,x2:0,  z2:40 },
+  {x1:6,  z1:-40,x2:6,  z2:40 },
+  {x1:-6, z1:-40,x2:-6, z2:40 },
+  {x1:6,  z1:0,  x2:6,  z2:12 },
+  {x1:-6, z1:0,  x2:-6, z2:12 },
+  {x1:-25,z1:-25,x2:-14,z2:-14},
+  {x1:25, z1:-25,x2:14, z2:-14},
+];
+function spawnPart(){
+  const tr=TPATHS[Math.floor(Math.random()*TPATHS.length)];
+  const fwd=Math.random()>0.5;
+  PARTS.push({tr,prog:fwd?0:1,speed:(0.003+Math.random()*0.007)*(fwd?1:-1),y:0.09+Math.random()*0.06});
+}
+function updateParts(){
+  while(PARTS.length<MAX_P) spawnPart();
+  for(let i=PARTS.length-1;i>=0;i--){
+    const p=PARTS[i]; p.prog+=p.speed;
+    if(p.prog<0||p.prog>1){PARTS.splice(i,1);continue;}
+    pPos[i*3]=p.tr.x1+(p.tr.x2-p.tr.x1)*p.prog;
+    pPos[i*3+1]=p.y;
+    pPos[i*3+2]=p.tr.z1+(p.tr.z2-p.tr.z1)*p.prog;
+  }
+  for(let i=PARTS.length;i<MAX_P;i++){pPos[i*3+1]=-200;}
   pGeo.attributes.position.needsUpdate=true;
 }
 
+// ── BUILD CITY ───────────────────────────────────────────────
 buildPCB();
 buildChip(0,0);
-[[-15,-4,5.8,0.92],[13,4,7.0,0.92]].forEach(([x,z,h,r])=>buildCap(x,z,h,r));
-[[-21,-9,0,[0,2,4,1]],[19,13,1.3,[4,3,1,0]]].forEach(([x,z,a,b])=>buildRes(x,z,a,b));
-[[-19,6,0],[-19,-6,Math.PI],[17,6,0],[17,-6,Math.PI]].forEach(([x,z,a])=>buildDiode(x,z,a));
-[[-24,-24],[24,24]].forEach(([x,z])=>buildTransformer(x,z));
-[[-27,-9,1.0],[25,15,1.0]].forEach(([x,z,s])=>buildTree(x,z,s));
 
-let camT=0;
+// Capacitors
+[
+  [-15,-4,5.8,0.92],[-15,4,7.0,0.92],[-15,10,4.8,0.85],
+  [13,-4,5.8,0.92], [13,4,7.0,0.92], [13,10,4.8,0.85],
+  [-4,-15,5.2,0.88],[4,-15,6.2,0.88],[10,-15,4.5,0.82],
+  [-4,13, 5.2,0.88],[4,13, 6.2,0.88],[10,13, 4.5,0.82],
+].forEach(([x,z,h,r])=>buildCap(x,z,h,r));
+
+// Resistors
+[
+  [-21,-9, 0,   [0,2,4,1]],[-21,1, 0.5,[1,3,5,0]],[-21,11,1.0,[2,4,0,3]],
+  [19,-10, 0.3, [3,1,5,2]],[19,3,  0.8, [5,0,2,4]],[19,13, 1.3,[4,3,1,0]],
+  [-9,-21, 0.2, [0,5,3,2]],[3,-21, 0.7, [2,1,4,5]],[12,-21,1.1,[4,0,5,1]],
+  [-9,19,  0.4, [1,4,2,3]],[3,19,  0.9, [3,5,0,4]],[12,19, 1.4,[5,2,1,0]],
+].forEach(([x,z,a,b])=>buildRes(x,z,a,b));
+
+// Diodes
+[
+  [-19,6,0],[-19,-6,Math.PI],[-19,12,0],[-19,-12,Math.PI],
+  [17,6,0], [17,-6,Math.PI], [17,12,0], [17,-12,Math.PI],
+  [-6,-19,Math.PI/2],[6,-19,Math.PI/2],[-12,-19,Math.PI/2],
+  [-6,17,-Math.PI/2],[6,17,-Math.PI/2],[12,17,-Math.PI/2],
+].forEach(([x,z,a])=>buildDiode(x,z,a));
+
+// Transistors
+[
+  [-17,-17,0.3],[-17,17,0.8],[17,-17,1.2],[17,17,0],
+  [-11,-18,0.6],[11,-18,1.5],[-11,18,0.2],[11,18,0.9],
+  [-18,0,0.4],[18,0,1.0],
+].forEach(([x,z,a])=>buildTransistor(x,z,a));
+
+// Transformers at 4 quadrant corners
+[[-24,-24],[24,-24],[-24,24],[24,24]].forEach(([x,z])=>buildTransformer(x,z));
+
+// Trees
+[
+  [-27,-9,1.0],[-27,2,1.2],[-27,13,0.9],[25,-11,1.1],[25,4,0.95],[25,15,1.0],
+  [-11,-27,1.0],[0,-27,1.15],[12,-27,0.9],[-11,25,1.0],[0,25,1.15],[12,25,0.9],
+  [-32,-32,0.8],[32,-32,0.8],[-32,32,0.8],[32,32,0.8],
+  [-30,-3,0.85],[30,-3,0.85],[-30,9,0.75],[30,9,0.75],
+  [-6,-30,0.9],[6,-30,0.88],[18,-28,0.82],[-6,28,0.9],[6,28,0.88],
+].forEach(([x,z,s])=>buildTree(x,z,s));
+
+// ── CAMERA WAYPOINTS ────────────────────────────────────────
+let camT=0, wpIdx=0, wpFrame=0;
+const WPS=[
+  {r:68,h:30,spd:0.0012,ly:3},  // wide overview
+  {r:32,h:16,spd:0.003, ly:4},  // city level
+  {r:16,h:7, spd:0.0045,ly:2},  // street level
+  {r:10,h:4, spd:0.005, ly:5},  // chip close-up
+  {r:24,h:42,spd:0.002, ly:1},  // birds eye
+  {r:50,h:12,spd:0.002, ly:3},  // low sweeping
+];
+const WP_LEN=700;
+const camSmooth=new THREE.Vector3(0,4,0);
+
+function updateCam(){
+  wpFrame++;
+  if(wpFrame>WP_LEN){wpFrame=0;wpIdx=(wpIdx+1)%WPS.length;}
+  const wp=WPS[wpIdx];
+  camT+=wp.spd;
+  const tx=Math.cos(camT)*wp.r;
+  const tz=Math.sin(camT)*wp.r;
+  camera.position.x+=(tx-camera.position.x)*0.018;
+  camera.position.y+=(wp.h-camera.position.y)*0.018;
+  camera.position.z+=(tz-camera.position.z)*0.018;
+  camSmooth.y+=(wp.ly-camSmooth.y)*0.04;
+  camera.lookAt(camSmooth);
+  document.getElementById('alt').textContent=(Math.round(camera.position.y*100)/100);
+  document.getElementById('ang').textContent=Math.round(((Math.atan2(camera.position.z,camera.position.x)*180/Math.PI)+360)%360);
+}
+
+// ── MAIN LOOP ────────────────────────────────────────────────
+let frame=0;
+const t0=Date.now();
+
+// Collect all arc lights for flickering
+const arcLights=[];
+scene.traverse(o=>{if(o.isPointLight&&o!==chipGlow)arcLights.push(o);});
+
 function animate(){
   requestAnimationFrame(animate);
-  camT+=0.002;
-  camera.position.x = Math.cos(camT)*60;
-  camera.position.z = Math.sin(camT)*60;
-  camera.lookAt(0,0,0);
-  
+  frame++;
+  const tf=frame*0.016;
+
+  // Chip glow pulse
+  chipGlow.intensity=2.5+Math.sin(tf*2.2)*1.8;
+
+  // Arc flicker
+  arcLights.forEach((l,i)=>{
+    l.intensity=1.2+Math.sin(tf*9+i*1.7)*0.7+Math.random()*0.25;
+  });
+
   updateParts();
-  
-  const el=Math.floor((Date.now()-0)/1000);
-  document.getElementById('su').textContent=el;
-  document.getElementById('alt').textContent=Math.round(camera.position.y);
-  
+  updateCam();
+
+  if(frame%20===0){
+    const el=Math.floor((Date.now()-t0)/1000);
+    document.getElementById('su').textContent=[Math.floor(el/3600),Math.floor((el%3600)/60),el%60].map(n=>String(n).padStart(2,'0')).join(':');
+    document.getElementById('si').textContent=(0.46+0.06*Math.sin(tf*0.5)).toFixed(2);
+    document.getElementById('st').textContent=Math.floor(24+3*Math.sin(tf*0.18));
+  }
+
   renderer.render(scene,camera);
 }
 
+clearInterval(loadInterval);
 loadFill.style.width='100%';
-setTimeout(()=>{ loadDiv.style.opacity='0'; animate(); },400);
+setTimeout(()=>{
+  loadDiv.style.opacity='0';
+  setTimeout(()=>loadDiv.remove(),1000);
+  animate();
+},400);
 </script>
 </body>
 </html>

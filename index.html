@@ -2,21 +2,23 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>3D Electronic City - First Person View</title>
+    <title>3D Electronic City - Real Traces Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
         .ui {
-            position: absolute; bottom: 20px; left: 20px;
+            position: absolute; top: 20px; left: 20px;
             color: #00ffcc; font-family: 'Courier New', monospace;
-            text-shadow: 0 0 5px #00ffcc; pointer-events: none;
+            text-shadow: 0 0 8px #00ffcc; pointer-events: none;
+            background: rgba(0,0,0,0.7); padding: 15px; 
+            border: 1px solid #00ffcc; border-radius: 5px;
         }
     </style>
 </head>
 <body>
     <div class="ui">
-        <h2>SYSTEM SCANNING...</h2>
-        <p>> Camera: First-Person Mode</p>
-        <p>> Target: Electronic City Center</p>
+        <div style="font-size: 1.1rem; font-weight: bold;">SYSTEM STATUS: STABLE</div>
+        <div id="data-status">> CIRCUIT TRACES: ACTIVE</div>
+        <div id="data-status">> COMPONENTS: SOLDERED</div>
     </div>
 
     <script type="importmap">
@@ -26,133 +28,128 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- KHỞI TẠO ---
+        // --- CẤU HÌNH ---
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x051005, 5, 25); // Tạo sương mù cho chiều sâu
+        scene.fog = new THREE.Fog(0x000500, 2, 30); 
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
         // --- ÁNH SÁNG ---
-        const ambient = new THREE.AmbientLight(0x404040, 1.5);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xffffff, 2);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
+        scene.add(new THREE.AmbientLight(0x404040, 1.5));
+        const spotlight = new THREE.PointLight(0x00ffcc, 10, 25);
+        scene.add(spotlight);
 
         // --- MẶT NỀN PCB ---
-        const pcbGeo = new THREE.PlaneGeometry(100, 100);
-        const pcbMat = new THREE.MeshStandardMaterial({ 
-            color: 0x063d12, // Màu xanh PCB
-            roughness: 0.3, 
-            metalness: 0.2 
-        });
-        const pcb = new THREE.Mesh(pcbGeo, pcbMat);
+        const pcb = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshStandardMaterial({ color: 0x042205, roughness: 0.2 })
+        );
         pcb.rotation.x = -Math.PI / 2;
         scene.add(pcb);
 
-        // Lưới mạch (Grid)
-        const grid = new THREE.GridHelper(100, 50, 0x00ff00, 0x002200);
-        grid.position.y = 0.01;
-        scene.add(grid);
-
-        // --- CÁC HÀM TẠO LINH KIỆN ---
-
-        // 1. Chip IC
-        function createChip(x, z) {
-            const group = new THREE.Group();
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(2, 0.4, 2),
-                new THREE.MeshStandardMaterial({ color: 0x222222 })
-            );
-            group.add(body);
-            // Chân chip (Pin)
-            const pinGeo = new THREE.BoxGeometry(0.1, 0.5, 0.1);
-            const pinMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 1 });
-            for(let i = -0.8; i <= 0.8; i += 0.4) {
-                const p1 = new THREE.Mesh(pinGeo, pinMat); p1.position.set(1.05, -0.1, i);
-                const p2 = new THREE.Mesh(pinGeo, pinMat); p2.position.set(-1.05, -0.1, i);
-                group.add(p1, p2);
+        // --- VẼ ĐƯỜNG MẠCH (TRACES) ---
+        function createTraces() {
+            const traceGroup = new THREE.Group();
+            for(let i = 0; i < 60; i++) {
+                const points = [];
+                let startX = (Math.random() - 0.5) * 40;
+                let startZ = (Math.random() - 0.5) * 40;
+                
+                // Tạo đường mạch ngoằn ngoèo 90 độ
+                points.push(new THREE.Vector3(startX, 0.01, startZ));
+                points.push(new THREE.Vector3(startX + Math.random()*2, 0.01, startZ));
+                points.push(new THREE.Vector3(startX + Math.random()*2, 0.01, startZ + Math.random()*2));
+                
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({ color: 0x006622 }); // Màu mạch đồng chìm
+                const line = new THREE.Line(geometry, material);
+                traceGroup.add(line);
             }
-            group.position.set(x, 0.2, z);
-            return group;
+            return traceGroup;
         }
+        scene.add(createTraces());
 
-        // 2. Tụ điện (Capacitor)
-        function createCapacitor(x, z) {
-            const h = Math.random() * 1.5 + 1;
-            const geo = new THREE.CylinderGeometry(0.5, 0.5, h, 32);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x00aaff });
-            const cap = new THREE.Mesh(geo, mat);
-            // Nắp bạc
-            const top = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 32), new THREE.MeshStandardMaterial({color: 0xcccccc}));
-            top.position.y = h/2;
-            cap.add(top);
-            cap.position.set(x, h/2, z);
-            return cap;
-        }
-
-        // 3. Điện trở (Resistor)
-        function createResistor(x, z) {
+        // --- TẠO LINH KIỆN CỐ ĐỊNH ---
+        function addFixedComponents() {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1, 16), new THREE.MeshStandardMaterial({color: 0xd2b48c}));
-            body.rotation.z = Math.PI/2;
-            group.add(body);
-            // Chân đồng
-            const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2, 8), new THREE.MeshStandardMaterial({color: 0xaaaaaa}));
-            wire.rotation.z = Math.PI/2;
-            group.add(wire);
-            group.position.set(x, 0.1, z);
-            return group;
+            for(let i = 0; i < 120; i++) {
+                const x = (Math.random() - 0.5) * 40;
+                const z = (Math.random() - 0.5) * 40;
+                const type = Math.random();
+                let mesh;
+
+                if(type > 0.8) { // Chip IC
+                    mesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 1.2), new THREE.MeshStandardMaterial({color: 0x111111}));
+                    mesh.position.y = 0.1; // Dính sát mặt sàn
+                    // Chân chip bạc
+                    const edges = new THREE.EdgesGeometry(mesh.geometry);
+                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x555555 }));
+                    mesh.add(line);
+                } else if(type > 0.4) { // Tụ hóa
+                    const h = 0.8 + Math.random();
+                    mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, h, 16), new THREE.MeshStandardMaterial({color: 0x0077ee}));
+                    mesh.position.y = h/2; // Đáy chạm sàn
+                } else { // Điện trở
+                    mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6, 8), new THREE.MeshStandardMaterial({color: 0x8b4513}));
+                    mesh.rotation.z = Math.PI/2;
+                    mesh.position.y = 0.1;
+                }
+                mesh.position.x = x;
+                mesh.position.z = z;
+                group.add(mesh);
+            }
+            scene.add(group);
+        }
+        addFixedComponents();
+
+        // --- DATA STREAM (Tia sáng chạy trên mạch) ---
+        const streams = [];
+        const streamMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+        for(let i=0; i<30; i++) {
+            const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.01, 0.4), streamMat);
+            resetStream(s);
+            scene.add(s);
+            streams.push(s);
         }
 
-        // --- RẢI LINH KIỆN LÊN THÀNH PHỐ ---
-        const components = [];
-        for (let i = 0; i < 150; i++) {
-            let item;
-            const x = (Math.random() - 0.5) * 40;
-            const z = (Math.random() - 0.5) * 40;
-            const rand = Math.random();
-
-            if(rand > 0.7) item = createChip(x, z);
-            else if(rand > 0.3) item = createCapacitor(x, z);
-            else item = createResistor(x, z);
-            
-            scene.add(item);
-            components.push(item);
+        function resetStream(s) {
+            s.position.x = (Math.random() - 0.5) * 40;
+            s.position.z = (Math.random() - 0.5) * 40;
+            s.position.y = 0.02; // Chạy trên mặt mạch một chút
+            s.speed = 0.15 + Math.random() * 0.2;
+            s.rotation.y = Math.random() > 0.5 ? 0 : Math.PI/2; 
         }
 
-        // --- HIỆU ỨNG BAY (FIRST PERSON VIEW) ---
+        // --- CAMERA ANIMATION ---
         let time = 0;
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.005;
+            time += 0.003;
 
-            // Camera bay theo đường hình sin (uốn lượn)
-            camera.position.x = Math.sin(time * 0.5) * 15;
-            camera.position.z = Math.cos(time * 0.3) * 15;
-            camera.position.y = 1.5 + Math.sin(time) * 0.5; // Bay lên xuống nhẹ
+            // Camera bay mượt hơn, tầm mắt thấp để thấy độ cao linh kiện
+            camera.position.x = Math.sin(time) * 15;
+            camera.position.z = Math.cos(time * 0.8) * 15;
+            camera.position.y = 2.5 + Math.sin(time * 0.5) * 0.5;
+            
+            camera.lookAt(Math.sin(time + 0.3) * 5, 0, Math.cos(time * 0.8 + 0.3) * 5);
 
-            // Nhìn về phía trước
-            const lookAtPos = new THREE.Vector3(
-                Math.sin((time + 0.1) * 0.5) * 15,
-                1.5,
-                Math.cos((time + 0.1) * 0.3) * 15
-            );
-            camera.lookAt(lookAtPos);
-
-            // Một vài linh kiện xoay nhẹ cho sinh động
-            components.forEach((c, i) => {
-                if(i % 5 === 0) c.rotation.y += 0.01;
+            // Cập nhật Data Streams
+            streams.forEach(s => {
+                if(s.rotation.y === 0) s.position.z += s.speed;
+                else s.position.x += s.speed;
+                
+                if (Math.abs(s.position.x) > 25 || Math.abs(s.position.z) > 25) resetStream(s);
             });
+
+            // Ánh sáng đi theo camera soi rọi mạch
+            spotlight.position.copy(camera.position);
 
             renderer.render(scene, camera);
         }
 
-        // Resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();

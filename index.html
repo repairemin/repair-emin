@@ -3,174 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Component City Banner</title>
+    <title>3D Component City V2 - Pro</title>
     <style>
-        /* Tối ưu hóa hiển thị toàn màn hình */
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000205; font-family: sans-serif; }
+        #ui {
+            position: absolute; top: 5%; left: 5%; color: #00f2fe;
+            pointer-events: none; text-transform: uppercase; letter-spacing: 2px;
+        }
         canvas { display: block; }
-        
-        /* Giao diện UI nằm đè lên Banner 3D */
-        #ui-overlay {
-            position: absolute;
-            bottom: 10%;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            color: white;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
-            pointer-events: none; /* Cho phép click xuyên qua UI xuống 3D */
-            width: 90%;
-            max-w: 800px;
-        }
-
-        #ui-overlay h1 {
-            font-size: 3rem;
-            font-weight: 900;
-            margin-bottom: 10px;
-            letter-spacing: -2px;
-            text-transform: uppercase;
-            background: linear-gradient(180deg, #fff, #88fbff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        #ui-overlay p {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            color: #ccc;
-        }
-
-        #cta-button {
-            display: inline-block;
-            padding: 15px 40px;
-            background: #00f2fe;
-            color: #000;
-            text-decoration: none;
-            font-weight: bold;
-            border-radius: 50px;
-            pointer-events: auto; /* Kích hoạt lại click cho nút */
-            transition: all 0.3s ease;
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
-        }
-
-        #cta-button:hover {
-            background: #fff;
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
-        }
     </style>
 </head>
 <body>
-
-    <div id="ui-overlay">
-        <h1>Digital Frontier</h1>
-        <p>Thành phố linh kiện tương lai. Xây dựng tầm nhìn từ những đường mạch.</p>
-        <a href="#" id="cta-button">KHÁM PHÁ CÔNG NGHỆ</a>
+    <div id="ui">
+        <h2 style="margin:0; font-size: 1.5rem;">Hardware City OS</h2>
+        <p style="color: #fff; font-size: 0.8rem; opacity: 0.7;">System Status: Online</p>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // --- KHỞI TẠO CƠ BẢN ---
-        let scene, camera, renderer, cityGroup, traces;
+        let scene, camera, renderer, cityGroup, clock;
 
         function init() {
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.15); // Thêm sương mù để tạo chiều sâu
+            scene.fog = new THREE.FogExp2(0x000205, 0.08);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 5, 10); // Góc nhìn từ trên cao xuống
-            camera.lookAt(0, 0, 0);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 10, 15);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true }); // Bật khử răng cưa để rõ nét
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio); // Tối ưu cho màn hình Retina/High-DPI
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
             cityGroup = new THREE.Group();
             scene.add(cityGroup);
+            clock = new THREE.Clock();
 
-            // --- TẠO CÁC ĐƯỜNG MẠCH (TRACES) ---
-            // Chúng ta dùng Plane với Texture Grid để mô phỏng
-            const floorGeometry = new THREE.PlaneGeometry(100, 100, 100, 100);
-            const floorMaterial = new THREE.MeshPhongMaterial({
-                color: 0x001122,
-                wireframe: true, // Biến thành lưới
-                transparent: true,
-                opacity: 0.2
-            });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            scene.add(floor);
+            // --- NỀN MẠCH TRACES ---
+            const grid = new THREE.GridHelper(100, 50, 0x004444, 0x002222);
+            scene.add(grid);
 
-            // Tạo các đường "mạch điện" neon chạy trên mặt đất
-            traces = new THREE.Group();
-            scene.add(traces);
-            const traceMaterial = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-            for (let i = 0; i < 50; i++) {
-                const geometry = new THREE.BoxGeometry(0.02, 0.02, THREE.MathUtils.randFloat(1, 10));
-                const trace = new THREE.Mesh(geometry, traceMaterial);
-                trace.position.set(
-                    THREE.MathUtils.randFloatSpread(20), 
-                    0.01, 
-                    THREE.MathUtils.randFloatSpread(20)
+            // --- HÀM TẠO LINH KIỆN ---
+
+            // 1. CHIP / CPU
+            function createCPU(x, z) {
+                const group = new THREE.Group();
+                // Thân chip
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(2, 0.4, 2),
+                    new THREE.MeshPhongMaterial({ color: 0x111111 })
                 );
-                traces.add(trace);
+                // Mặt trên (Heat spreader)
+                const top = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.4, 0.1, 1.4),
+                    new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 1, roughness: 0.2 })
+                );
+                top.position.y = 0.25;
+                group.add(body, top);
+                
+                // Chân chip (Pin)
+                const pinGeo = new THREE.BoxGeometry(0.1, 0.2, 0.1);
+                const pinMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
+                for(let i=-1; i<=1; i+=0.4) {
+                    for(let j=-1; j<=1; j+=2) {
+                        const p1 = new THREE.Mesh(pinGeo, pinMat);
+                        p1.position.set(i, -0.2, j);
+                        const p2 = new THREE.Mesh(pinGeo, pinMat);
+                        p2.position.set(j, -0.2, i);
+                        group.add(p1, p2);
+                    }
+                }
+                group.position.set(x, 0.2, z);
+                cityGroup.add(group);
             }
 
-            // --- TẠO THÀNH PHỐ LINH KIỆN (BUILDINGS) ---
-            // Tạo một vật liệu chung kiểu kim loại đen
-            const buildingMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x111111, 
-                specular: 0x555555, 
-                shininess: 30,
-                flatShining: true
-            });
-
-            // Hàm tạo một "tòa nhà" linh kiện
-            function createBuilding(width, height, depth, x, z, color) {
-                const geometry = new THREE.BoxGeometry(width, height, depth);
-                const building = new THREE.Mesh(geometry, buildingMaterial);
-                building.position.set(x, height / 2, z);
-                
-                // Thêm viền phát sáng (Glow edge) cho rõ nét
-                const edges = new THREE.EdgesGeometry(geometry);
-                const lineMat = new THREE.LineBasicMaterial({ color: color });
-                const line = new THREE.LineSegments(edges, lineMat);
-                building.add(line);
-
-                cityGroup.add(building);
+            // 2. TỤ ĐIỆN (Capacitor)
+            function createCapacitor(x, z) {
+                const group = new THREE.Group();
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16),
+                    new THREE.MeshPhongMaterial({ color: 0x003366 })
+                );
+                const stripe = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.1, 1.21, 0.4),
+                    new THREE.MeshBasicMaterial({ color: 0xcccccc })
+                );
+                stripe.position.x = 0.35;
+                group.add(body, stripe);
+                group.position.set(x, 0.6, z);
+                cityGroup.add(group);
             }
 
-            // Tạo ngẫu nhiên các tòa nhà
-            for (let i = 0; i < 40; i++) {
-                const h = THREE.MathUtils.randFloat(0.5, 4);
-                const w = THREE.MathUtils.randFloat(0.5, 2);
-                const d = THREE.MathUtils.randFloat(0.5, 2);
-                const x = THREE.MathUtils.randFloatSpread(15);
-                const z = THREE.MathUtils.randFloatSpread(15);
-                
-                // Ngẫu nhiên màu viền (xanh hoặc tím)
-                const color = Math.random() > 0.5 ? 0x00f2fe : 0xff00ff;
-                
-                createBuilding(w, h, d, x, z, color);
+            // 3. ĐIỆN TRỞ (Resistor)
+            function createResistor(x, z) {
+                const group = new THREE.Group();
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.2, 0.2, 1, 12),
+                    new THREE.MeshPhongMaterial({ color: 0xccaa88 })
+                );
+                body.rotation.z = Math.PI/2;
+                group.add(body);
+                // Vòng màu
+                [0.2, 0, -0.2].forEach((pos, i) => {
+                    const ring = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.21, 0.21, 0.1, 12),
+                        new THREE.MeshBasicMaterial({ color: i==0?0xff0000:0x00ff00 })
+                    );
+                    ring.rotation.z = Math.PI/2;
+                    ring.position.x = pos;
+                    group.add(ring);
+                });
+                group.position.set(x, 0.2, z);
+                cityGroup.add(group);
             }
 
-            // --- ÁNH SÁNG ---
-            const ambientLight = new THREE.AmbientLight(0x222222);
-            scene.add(ambientLight);
+            // 4. TRANSISTOR
+            function createTransistor(x, z) {
+                const group = new THREE.Group();
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.6, 0.8, 0.3),
+                    new THREE.MeshPhongMaterial({ color: 0x222222 })
+                );
+                for(let i=-0.2; i<=0.2; i+=0.2) {
+                    const leg = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.05, 0.5, 0.05),
+                        new THREE.MeshBasicMaterial({ color: 0xaaaaaa })
+                    );
+                    leg.position.set(i, -0.6, 0);
+                    group.add(leg);
+                }
+                group.position.set(x, 0.8, z);
+                cityGroup.add(group);
+            }
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(5, 10, 7);
-            scene.add(directionalLight);
+            // --- RẢI LINH KIỆN LÊN BOARD ---
+            for (let i = 0; i < 60; i++) {
+                const x = THREE.MathUtils.randFloatSpread(40);
+                const z = THREE.MathUtils.randFloatSpread(40);
+                const type = Math.floor(Math.random() * 4);
+                
+                if(type === 0) createCPU(x, z);
+                else if(type === 1) createCapacitor(x, z);
+                else if(type === 2) createResistor(x, z);
+                else createTransistor(x, z);
+            }
 
-            // Ánh sáng điểm tạo hiệu ứng neon từ dưới lên
-            const pointLight = new THREE.PointLight(0x00f2fe, 2, 20);
-            pointLight.position.set(0, 1, 0);
-            scene.add(pointLight);
+            // Ánh sáng
+            const ambient = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambient);
+            const sun = new THREE.DirectionalLight(0xffffff, 1);
+            sun.position.set(10, 20, 10);
+            scene.add(sun);
 
-            // Xử lý khi resize cửa sổ
-            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('resize', onWindowResize);
         }
 
         function onWindowResize() {
@@ -179,39 +165,25 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- ANIMATION (BỘ NÃO CỦA BANNER) ---
         function animate() {
             requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
 
-            // 1. Camera di chuyển chậm xung quanh thành phố
-            const timer = Date.now() * 0.0001;
-            camera.position.x = Math.sin(timer) * 12;
-            camera.position.z = Math.cos(timer) * 12;
-            camera.lookAt(0, 1, 0);
+            // Camera bay lượn chậm
+            camera.position.x = Math.cos(t * 0.1) * 20;
+            camera.position.z = Math.sin(t * 0.1) * 20;
+            camera.lookAt(0, 0, 0);
 
-            // 2. Làm cho các tòa nhà nhấp nháy nhẹ
-            cityGroup.children.forEach((bld, i) => {
-                const line = bld.children[0];
-                if(line) {
-                    line.material.opacity = 0.5 + Math.sin(Date.now() * 0.002 + i) * 0.5;
-                }
-            });
-
-            // 3. Di chuyển các đường mạch Traces mô phỏng dữ liệu flow
-            traces.children.forEach(trace => {
-                trace.position.z += 0.05; // Chạy về phía trước
-                if (trace.position.z > 10) {
-                    trace.position.z = -10; // Reset lại khi đi hết đường
-                }
+            // Hiệu ứng các linh kiện hơi rung động hoặc phát sáng
+            cityGroup.children.forEach((obj, i) => {
+                obj.position.y += Math.sin(t + i) * 0.002;
             });
 
             renderer.render(scene, camera);
         }
 
-        // --- CHẠY ---
         init();
         animate();
-
     </script>
 </body>
 </html>

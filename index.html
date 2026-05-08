@@ -2,498 +2,723 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Electronic City 3D - Organic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electronic City ⚡</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { overflow:hidden; background:#050810; font-family:'Courier New',monospace; }
-#c { width:100vw; height:100vh; display:block; }
-.ui { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
-.topbar {
-    position:absolute; top:0; left:0; right:0;
-    background:linear-gradient(180deg,rgba(0,0,0,.75) 0%,transparent 100%);
-    padding:14px 22px; display:flex; align-items:center; gap:14px;
-}
-.logo { font-size:11px; letter-spacing:4px; color:#00ff88; font-weight:bold; }
-.logo span { color:#ff6600; }
-.dots { display:flex; gap:7px; }
-.dot { width:6px; height:6px; border-radius:50%; animation:blink 1.6s ease-in-out infinite; }
-.dot.g{background:#00ff88}.dot.y{background:#ffcc00;animation-delay:.5s}.dot.r{background:#ff4444;animation-delay:1s}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-.panel{
-    position:absolute; bottom:22px; left:22px;
-    background:rgba(0,0,0,.78); border:1px solid rgba(0,255,136,.25);
-    border-radius:4px; padding:12px 16px; font-size:10px; color:#888; line-height:1.9; letter-spacing:1px;
-}
-.panel .v{color:#00ff88}.panel .t{color:#ff6600;font-size:9px;letter-spacing:3px;margin-bottom:4px}
-.legend{
-    position:absolute; bottom:22px; right:22px;
-    background:rgba(0,0,0,.78); border:1px solid rgba(0,255,136,.2);
-    border-radius:4px; padding:12px 16px; font-size:9px; letter-spacing:1px;
-}
-.li{display:flex;align-items:center;gap:8px;margin-bottom:5px;color:#888}
-.lc{width:9px;height:9px;border-radius:2px}
-.corners span{position:absolute;width:18px;height:18px;border-color:rgba(0,255,136,.45);border-style:solid}
-.corners .tl{top:7px;left:7px;border-width:2px 0 0 2px}
-.corners .tr{top:7px;right:7px;border-width:2px 2px 0 0}
-.corners .bl{bottom:7px;left:7px;border-width:0 0 2px 2px}
-.corners .br{bottom:7px;right:7px;border-width:0 2px 2px 0}
-.scan{position:absolute;top:0;left:0;right:0;height:1px;
-    background:linear-gradient(90deg,transparent,rgba(0,255,136,.22),transparent);
-    animation:sc 5s linear infinite}
-@keyframes sc{0%{top:0}100%{top:100%}}
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #050e06;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: crosshair;
+  }
+
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  #ui {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #title {
+    position: absolute;
+    top: 24px; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  #title h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(18px, 3vw, 32px);
+    color: #00ff88;
+    text-shadow: 0 0 20px #00ff8888, 0 0 60px #00ff8833;
+    letter-spacing: 4px;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+
+  #title p {
+    font-size: 11px;
+    color: #00ff8866;
+    letter-spacing: 6px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 20px #00ff8888, 0 0 60px #00ff8833; }
+    50% { text-shadow: 0 0 30px #00ff88cc, 0 0 80px #00ff8866, 0 0 120px #00ff8822; }
+  }
+
+  #legend {
+    position: absolute;
+    bottom: 24px; right: 24px;
+    background: rgba(0,20,8,0.85);
+    border: 1px solid #00ff8833;
+    border-radius: 8px;
+    padding: 16px 20px;
+    backdrop-filter: blur(8px);
+  }
+
+  #legend h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: #00ff88;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #00ff8822;
+    padding-bottom: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #88ccaa;
+  }
+
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  #stats {
+    position: absolute;
+    bottom: 24px; left: 24px;
+    font-size: 11px;
+    color: #00ff8855;
+    line-height: 1.8;
+  }
+
+  #scanline {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  #vignette {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div class="ui">
-  <div class="scan"></div>
-  <div class="corners">
-    <span class="tl"></span><span class="tr"></span>
-    <span class="bl"></span><span class="br"></span>
+
+<canvas id="city"></canvas>
+
+<div id="ui">
+  <div id="scanline"></div>
+  <div id="vignette"></div>
+
+  <div id="title">
+    <h1>⚡ ELECTRONIC CITY</h1>
+    <p>Isometric PCB Metropolis</p>
   </div>
-  <div class="topbar">
-    <div class="logo">Electronic <span>City</span> V3.0</div>
-    <div class="dots"><div class="dot g"></div><div class="dot y"></div><div class="dot r"></div></div>
+
+  <div id="legend">
+    <h3>// LEGEND</h3>
+    <div class="legend-item"><div class="legend-dot" style="background:#c0c0ff;box-shadow:0 0 6px #8888ff"></div> IC CHIP — Stadium</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#aaddff;box-shadow:0 0 6px #44aaff"></div> Capacitor — Skyscraper</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffcc44;box-shadow:0 0 6px #ffaa00"></div> Resistor — Building</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff6644;box-shadow:0 0 6px #ff4400"></div> Diode — Shop</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#cc88ff;box-shadow:0 0 6px #aa44ff"></div> Transistor — Factory</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffeeaa;box-shadow:0 0 6px #ffcc44"></div> Transformer — Power Station</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#44ff88;box-shadow:0 0 6px #00ff44"></div> Ceramic Cap — Tree</div>
   </div>
-  <div class="panel">
-    <div class="t">// SYSTEM</div>
-    <div>VOLTAGE &nbsp;<span class="v">5.0V DC</span></div>
-    <div>CLOCK &nbsp;&nbsp;<span class="v">100 MHz</span></div>
-    <div>TEMP &nbsp;&nbsp;&nbsp;<span class="v">42 C</span></div>
-    <div>NODES &nbsp;&nbsp;<span class="v" id="nc">0</span></div>
-  </div>
-  <div class="legend">
-    <div class="li"><div class="lc" style="background:#1a3a6a"></div>IC CHIP</div>
-    <div class="li"><div class="lc" style="background:#2244cc"></div>CAPACITOR</div>
-    <div class="li"><div class="lc" style="background:#887755"></div>RESISTOR</div>
-    <div class="li"><div class="lc" style="background:#221100"></div>TRANSISTOR</div>
-    <div class="li"><div class="lc" style="background:#ff3300"></div>LED NODE</div>
+
+  <div id="stats">
+    <div>VOLTAGE : 5.0V DC</div>
+    <div>CURRENT : <span id="stat-current">0.00</span>A</div>
+    <div>FREQ    : 1.0 MHz</div>
+    <div>TEMP    : <span id="stat-temp">25</span>°C</div>
+    <div>UPTIME  : <span id="stat-uptime">00:00:00</span></div>
   </div>
 </div>
 
-<script type="importmap">
-{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
-</script>
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+<script>
+const canvas = document.getElementById('city');
+const ctx = canvas.getContext('2d');
+let W, H, CX, CY;
+let t = 0;
+let startTime = Date.now();
 
-// ── deterministic RNG ────────────────────────────────────────────────────────
-let _seed = 137;
-function rng() { _seed = (_seed * 1664525 + 1013904223) & 0xffffffff; return ((_seed >>> 0) / 0xffffffff); }
-
-// ── SETUP ────────────────────────────────────────────────────────────────────
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050810);
-scene.fog = new THREE.FogExp2(0x050810, 0.008);
-
-const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 600);
-camera.position.set(0, 42, 55);
-camera.lookAt(0, 0, 0);
-
-const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.minDistance = 8;
-controls.maxDistance = 150;
-controls.maxPolarAngle = Math.PI / 2.05;
-
-// ── LIGHTING ──────────────────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0x111827, 3));
-const sun = new THREE.DirectionalLight(0xffffff, 1.8);
-sun.position.set(30, 60, 20);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -95; sun.shadow.camera.right = 95;
-sun.shadow.camera.top  =  95; sun.shadow.camera.bottom= -95;
-sun.shadow.camera.far  = 260;
-scene.add(sun);
-scene.add(new THREE.HemisphereLight(0x0a1228, 0x0d2010, 1.5));
-
-// ── SHARED MATERIALS ──────────────────────────────────────────────────────────
-const MATS = {
-  pcb:   new THREE.MeshStandardMaterial({ color:0x0c2209, roughness:.65, metalness:.1 }),
-  trace: new THREE.MeshStandardMaterial({ color:0x1a6617, roughness:.3, metalness:.4, emissive:0x0a3308, emissiveIntensity:.4 }),
-  gold:  new THREE.MeshStandardMaterial({ color:0xc8960c, roughness:.1, metalness:1.0 }),
-  silver:new THREE.MeshStandardMaterial({ color:0xcccccc, roughness:.1, metalness:.95 }),
-  road:  new THREE.MeshStandardMaterial({ color:0x0f1800, roughness:.95 }),
-};
-
-function mkMat(props){ return new THREE.MeshStandardMaterial(props); }
-function mkMesh(geo, matOrProps, castShadow=false){
-  const mat = (matOrProps instanceof THREE.Material) ? matOrProps : mkMat(matOrProps);
-  const m = new THREE.Mesh(geo, mat);
-  m.castShadow = castShadow; m.receiveShadow = true;
-  return m;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  CX = W / 2;
+  CY = H / 2;
 }
-function addAt(obj, x, y, z){ obj.position.set(x,y,z); scene.add(obj); }
+resize();
+window.addEventListener('resize', resize);
 
-// ── PCB BASE ──────────────────────────────────────────────────────────────────
-const WORLD = 96;
-const pcbBase = mkMesh(new THREE.BoxGeometry(WORLD, .6, WORLD), MATS.pcb);
-pcbBase.receiveShadow = true;
-pcbBase.position.y = -.3;
-scene.add(pcbBase);
+// ─── ISO HELPERS ─────────────────────────────────────────────
+const ISO_ANGLE = Math.PI / 6;
+const TILE = 52;
 
-// ── ORGANIC ROAD NETWORK ──────────────────────────────────────────────────────
-// Grid of intersection nodes with organic jitter
-const COLS = 8, ROWS = 8, STEP = 11;
-const nodes = [];
-
-for (let r = 0; r < ROWS; r++) {
-  for (let c = 0; c < COLS; c++) {
-    const bx = (c - (COLS-1)/2) * STEP;
-    const bz = (r - (ROWS-1)/2) * STEP;
-    // border = small jitter, interior = large jitter  
-    const border = (r===0 || r===ROWS-1 || c===0 || c===COLS-1);
-    const jx = (rng()-.5) * (border ? 2.5 : 6.0);
-    const jz = (rng()-.5) * (border ? 2.5 : 6.0);
-    nodes.push({ x: bx+jx, z: bz+jz, id: nodes.length });
-  }
+function isoToScreen(gx, gy, gz = 0) {
+  const sx = CX + (gx - gy) * TILE * Math.cos(ISO_ANGLE);
+  const sy = CY + (gx + gy) * TILE * Math.sin(ISO_ANGLE) - gz * TILE * 0.9;
+  return { x: sx, y: sy };
 }
 
-// Edges: grid neighbors + occasional diagonals  
-const edgeSet = new Set();
-function eKey(a,b){ return a<b?`${a}-${b}`:`${b}-${a}`; }
-for (let r = 0; r < ROWS; r++) {
-  for (let c = 0; c < COLS; c++) {
-    const i = r*COLS+c;
-    if (c < COLS-1) edgeSet.add(eKey(i, i+1));          // right
-    if (r < ROWS-1) edgeSet.add(eKey(i, i+COLS));        // down
-    // sparse diagonals — gives irregular blocks
-    if (c < COLS-1 && r < ROWS-1 && rng() < 0.25) edgeSet.add(eKey(i, i+COLS+1));
-    if (c > 0       && r < ROWS-1 && rng() < 0.25) edgeSet.add(eKey(i, i+COLS-1));
-  }
+// ─── COLOR HELPERS ────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return { r, g, b };
 }
 
-const ROAD_W = 2.2;
-const allEdges = [...edgeSet];
-
-// Draw roads and PCB traces
-allEdges.forEach(key => {
-  const [ai,bi] = key.split('-').map(Number);
-  const a = nodes[ai], b = nodes[bi];
-  const dx=b.x-a.x, dz=b.z-a.z, len=Math.sqrt(dx*dx+dz*dz);
-  const ang = -Math.atan2(dz, dx);
-
-  const road = mkMesh(new THREE.PlaneGeometry(len, ROAD_W), MATS.road);
-  road.rotation.x = -Math.PI/2; road.rotation.z = ang;
-  road.position.set((a.x+b.x)/2, .01, (a.z+b.z)/2);
-  road.receiveShadow = true;
-  scene.add(road);
-
-  // copper traces alongside road
-  [-0.55, 0, 0.55].forEach(off => {
-    const perp = Math.atan2(dz, dx) + Math.PI/2;
-    const ox = Math.cos(perp)*off, oz = Math.sin(perp)*off;
-    const tr = mkMesh(new THREE.PlaneGeometry(len-.2, .09), MATS.trace);
-    tr.rotation.x = -Math.PI/2; tr.rotation.z = ang;
-    tr.position.set((a.x+b.x)/2+ox, .033, (a.z+b.z)/2+oz);
-    scene.add(tr);
-  });
-});
-
-// PCB solder pads and random traces
-for (let i=0; i<240; i++){
-  const pad = mkMesh(new THREE.CylinderGeometry(.13,.13,.04,8), MATS.gold);
-  pad.position.set((rng()-.5)*WORLD*.88, .02, (rng()-.5)*WORLD*.88);
-  scene.add(pad);
-}
-for (let i=0; i<130; i++){
-  const cx=(rng()-.5)*WORLD*.84, cz=(rng()-.5)*WORLD*.84;
-  const a=rng()*Math.PI, l=rng()*4+.8;
-  const tr = mkMesh(new THREE.PlaneGeometry(l,.08), MATS.trace);
-  tr.rotation.x=-Math.PI/2; tr.rotation.z=a;
-  tr.position.set(cx,.04,cz);
-  scene.add(tr);
+function darken(hex, factor) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgb(${Math.floor(r*factor)},${Math.floor(g*factor)},${Math.floor(b*factor)})`;
 }
 
-// ── COMPONENT FACTORIES ───────────────────────────────────────────────────────
+function glowColor(hex, alpha) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
-function createICChip(x, z, scale=1){
-  const g=new THREE.Group();
-  const w=3.4*scale, h=.48*scale, d=3.4*scale;
-  const body=mkMesh(new THREE.BoxGeometry(w,h,d),{color:0x111827,roughness:.3,metalness:.1},true);
-  g.add(body);
-  const mark=mkMesh(new THREE.PlaneGeometry(w*.65,d*.65),{color:0x1a2a44,roughness:.5});
-  mark.rotation.x=-Math.PI/2; mark.position.y=h/2+.01; g.add(mark);
-  const dot=mkMesh(new THREE.CircleGeometry(.11*scale,8),{color:0x88aadd});
-  dot.rotation.x=-Math.PI/2; dot.position.set(-w*.27,h/2+.01,-d*.27); g.add(dot);
-  const pMat=mkMat({color:0xc8960c,roughness:.1,metalness:1.0});
-  const n=Math.floor(5*scale), sp=(d*.7)/(n-1);
-  [[ 1,'x'],[-1,'x'],[ 1,'z'],[-1,'z']].forEach(([dir,ax])=>{
-    for(let i=0;i<n;i++){
-      const off=-d*.35+i*sp;
-      const p=new THREE.Mesh(new THREE.BoxGeometry(.08*scale,.28*scale,.2*scale),pMat);
-      if(ax==='x'){ p.position.set(dir*(w/2+.17*scale),-.04*scale,off); p.rotation.z=dir*.2; }
-      else { p.rotation.y=Math.PI/2; p.position.set(off,-.04*scale,dir*(d/2+.17*scale)); }
-      g.add(p);
+// ─── DRAW ISO BLOCK ────────────────────────────────────────────
+function drawIsoBox(gx, gy, gz, gw, gd, gh, topColor, sideColor, rimColor) {
+  // corners
+  const tl = isoToScreen(gx,      gy,      gz + gh);
+  const tr = isoToScreen(gx + gw, gy,      gz + gh);
+  const br = isoToScreen(gx + gw, gy + gd, gz + gh);
+  const bl = isoToScreen(gx,      gy + gd, gz + gh);
+
+  const ml = isoToScreen(gx,      gy + gd, gz);
+  const mr = isoToScreen(gx + gw, gy + gd, gz);
+  const fl = isoToScreen(gx,      gy,      gz);
+  const fr = isoToScreen(gx + gw, gy,      gz);
+
+  // left face
+  ctx.beginPath();
+  ctx.moveTo(tl.x, tl.y);
+  ctx.lineTo(bl.x, bl.y);
+  ctx.lineTo(ml.x, ml.y);
+  ctx.lineTo(fl.x, fl.y);
+  ctx.closePath();
+  ctx.fillStyle = darken(sideColor, 0.55);
+  ctx.fill();
+
+  // right face
+  ctx.beginPath();
+  ctx.moveTo(tr.x, tr.y);
+  ctx.lineTo(br.x, br.y);
+  ctx.lineTo(mr.x, mr.y);
+  ctx.lineTo(fr.x, fr.y);
+  ctx.closePath();
+  ctx.fillStyle = darken(sideColor, 0.75);
+  ctx.fill();
+
+  // top face
+  ctx.beginPath();
+  ctx.moveTo(tl.x, tl.y);
+  ctx.lineTo(tr.x, tr.y);
+  ctx.lineTo(br.x, br.y);
+  ctx.lineTo(bl.x, bl.y);
+  ctx.closePath();
+  ctx.fillStyle = topColor;
+  ctx.fill();
+
+  // rim
+  ctx.strokeStyle = rimColor || '#00ff8844';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+}
+
+// ─── PCB GROUND ────────────────────────────────────────────────
+function drawGround() {
+  const size = 16;
+  for (let x = -size; x < size; x++) {
+    for (let y = -size; y < size; y++) {
+      const p1 = isoToScreen(x,   y);
+      const p2 = isoToScreen(x+1, y);
+      const p3 = isoToScreen(x+1, y+1);
+      const p4 = isoToScreen(x,   y+1);
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+
+      const dist = Math.sqrt(x*x + y*y);
+      const alpha = Math.max(0, 0.6 - dist * 0.04);
+      ctx.fillStyle = `rgba(0, 30, 12, ${alpha})`;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0, 80, 30, 0.25)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
     }
-  });
-  addAt(g,x,h/2,z); return g;
-}
-
-function createBGA(x,z){
-  const g=new THREE.Group(), w=5.4, h=.48, d=5.4;
-  const body=mkMesh(new THREE.BoxGeometry(w,h,d),{color:0x0d1020,roughness:.2,metalness:.1},true);
-  g.add(body);
-  const die=mkMesh(new THREE.BoxGeometry(w*.68,h+.05,d*.68),{color:0x1a2a55,roughness:.4});
-  die.position.y=.01; g.add(die);
-  const bMat=mkMat({color:0xd4af37,roughness:.1,metalness:.95});
-  for(let bi=-2;bi<=2;bi++) for(let bj=-2;bj<=2;bj++){
-    const ball=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),bMat);
-    ball.position.set(bi*.88,-h/2-.09,bj*.88); g.add(ball);
   }
-  const lbl=mkMesh(new THREE.PlaneGeometry(w*.55,d*.2),{color:0x334488});
-  lbl.rotation.x=-Math.PI/2; lbl.position.y=h/2+.01; g.add(lbl);
-  addAt(g,x,h/2,z); return g;
 }
 
-const CAP_COLORS=[0x1133cc,0x2244aa,0xcc3300,0x226622,0x554400,0x332255,0x005577,0xaa2200];
-function createCapacitor(x,z,color){
-  if(!color) color=CAP_COLORS[Math.floor(rng()*CAP_COLORS.length)];
-  const g=new THREE.Group(), r=.52, h=1.55+rng()*.95;
-  const body=mkMesh(new THREE.CylinderGeometry(r,r,h,24),{color,roughness:.3,metalness:.1},true);
-  g.add(body);
-  const top=mkMesh(new THREE.CylinderGeometry(r,r,.07,24),{color:0xaaaaaa,roughness:.2,metalness:.9});
-  top.position.y=h/2+.035; g.add(top);
-  [0,Math.PI/2].forEach(rot=>{
-    const v=mkMesh(new THREE.BoxGeometry(r*1.4,.025,.055),{color:0x666666});
-    v.rotation.y=rot; v.position.y=h/2+.08; g.add(v);
-  });
-  const stripe=new THREE.Mesh(
-    new THREE.CylinderGeometry(r+.01,r+.01,h*.55,24,1,true,Math.PI*1.7,Math.PI*.6),
-    mkMat({color:0xdddddd,roughness:.5,side:THREE.FrontSide})
-  );
-  g.add(stripe);
-  [-.18,.18].forEach(ox=>{
-    const l=mkMesh(new THREE.CylinderGeometry(.04,.04,.55,8),MATS.silver);
-    l.position.set(ox,-h/2-.27,0); g.add(l);
-  });
-  addAt(g,x,h/2,z); return g;
-}
-
-function createResistor(x,z){
-  const g=new THREE.Group();
-  const bc=[[0xff0000,0xff8800,0xffff00,0x884400],[0x0000ff,0x00aa00,0x888888],[0xffaa00,0xff0000]];
-  const bands=[bc[0][Math.floor(rng()*4)], bc[1][Math.floor(rng()*3)], bc[2][Math.floor(rng()*2)]];
-  const body=mkMesh(new THREE.CylinderGeometry(.21,.21,.9,16),{color:0xd4aa77,roughness:.8},true);
-  body.rotation.z=Math.PI/2; g.add(body);
-  bands.forEach((c,i)=>{
-    const b=mkMesh(new THREE.CylinderGeometry(.215,.215,.09,16),{color:c,roughness:.6});
-    b.rotation.z=Math.PI/2; b.position.x=-.26+i*.24; g.add(b);
-  });
-  const gb=mkMesh(new THREE.CylinderGeometry(.215,.215,.07,16),MATS.gold);
-  gb.rotation.z=Math.PI/2; gb.position.x=.35; g.add(gb);
-  [-1,1].forEach(d=>{
-    const l=mkMesh(new THREE.CylinderGeometry(.033,.033,.62,8),MATS.silver);
-    l.rotation.z=Math.PI/2; l.position.x=d*.8; g.add(l);
-  });
-  addAt(g,x,.25,z); g.rotation.y=rng()*Math.PI; return g;
-}
-
-function createTransistor(x,z){
-  const g=new THREE.Group(), h=1.2;
-  const body=mkMesh(new THREE.CylinderGeometry(.34,.34,h,20),{color:0x111111,roughness:.4},true);
-  g.add(body);
-  // flat face (TO-92 characteristic)
-  const flat=mkMesh(new THREE.PlaneGeometry(.62,h),{color:0x1a1a1a,roughness:.6});
-  flat.position.set(.32,0,0); flat.rotation.y=Math.PI/2; g.add(flat);
-  // label
-  const lbl=mkMesh(new THREE.PlaneGeometry(.44,.28),{color:0x223344});
-  lbl.position.set(.323,.1,0); lbl.rotation.y=Math.PI/2; g.add(lbl);
-  // 3 leads
-  [-.13, 0, .13].forEach(ox=>{
-    const l=mkMesh(new THREE.CylinderGeometry(.038,.038,.88,8),MATS.silver);
-    l.position.set(ox,-h/2-.44,0); g.add(l);
-  });
-  addAt(g,x,h/2,z); g.rotation.y=rng()*Math.PI*2; return g;
-}
-
-const LED_COLS=[0xff2200,0x00ff55,0x0077ff,0xffcc00,0xff00cc,0x00ffff,0xff6600,0x88ff00];
-function createLED(x,z,color){
-  if(!color) color=LED_COLS[Math.floor(rng()*LED_COLS.length)];
-  const g=new THREE.Group();
-  const dome=new THREE.Mesh(
-    new THREE.SphereGeometry(.32,16,16,0,Math.PI*2,0,Math.PI/2),
-    mkMat({color,roughness:.08,emissive:color,emissiveIntensity:1.5,transparent:true,opacity:.82})
-  );
-  dome.position.y=.5; g.add(dome);
-  const collar=mkMesh(new THREE.CylinderGeometry(.33,.33,.5,16),{color:0xdddddd,roughness:.3,metalness:.5});
-  collar.position.y=.25; g.add(collar);
-  [-.11, .11].forEach((ox,i)=>{
-    const lh=i===0?1.02:.8;
-    const l=mkMesh(new THREE.CylinderGeometry(.038,.038,lh,8),MATS.silver);
-    l.position.set(ox,-lh/2,0); g.add(l);
-  });
-  const glow=new THREE.PointLight(color,2.8,7);
-  glow.position.y=.82; g.add(glow);
-  addAt(g,x,0,z); return g;
-}
-
-function createDiode(x,z){
-  const g=new THREE.Group();
-  const body=mkMesh(new THREE.CylinderGeometry(.17,.17,.72,16),{color:0x2222aa,roughness:.3},true);
-  body.rotation.z=Math.PI/2; g.add(body);
-  const stripe=mkMesh(new THREE.CylinderGeometry(.175,.175,.09,16),{color:0xffffff,roughness:.5});
-  stripe.rotation.z=Math.PI/2; stripe.position.x=.27; g.add(stripe);
-  [-1,1].forEach(d=>{
-    const l=mkMesh(new THREE.CylinderGeometry(.032,.032,.48,8),MATS.silver);
-    l.rotation.z=Math.PI/2; l.position.x=d*.62; g.add(l);
-  });
-  addAt(g,x,.2,z); g.rotation.y=rng()*Math.PI; return g;
-}
-
-function createCrystal(x,z){
-  const g=new THREE.Group();
-  const b=mkMesh(new THREE.BoxGeometry(.46,.32,1.32),{color:0xaaaaaa,roughness:.1,metalness:.9},true);
-  g.add(b);
-  [-.5,.5].forEach(oz=>{
-    const l=mkMesh(new THREE.CylinderGeometry(.038,.038,.52,8),MATS.silver);
-    l.position.set(0,-.27,oz); g.add(l);
-  });
-  addAt(g,x,.16,z); g.rotation.y=rng()*Math.PI; return g;
-}
-
-function createInductor(x,z){
-  const g=new THREE.Group();
-  const core=mkMesh(new THREE.TorusGeometry(.42,.17,10,20),{color:0x442200,roughness:.7});
-  core.rotation.x=Math.PI/2; g.add(core);
-  for(let i=0;i<12;i++){
-    const a=(i/12)*Math.PI*2;
-    const w=new THREE.Mesh(new THREE.TorusGeometry(.42,.037,6,6,Math.PI*.27),
-      mkMat({color:0xc8960c,roughness:.2,metalness:.9}));
-    w.rotation.x=Math.PI/2; w.rotation.z=a; g.add(w);
-  }
-  addAt(g,x,.28,z); return g;
-}
-
-// ── CITY LAYOUT ────────────────────────────────────────────────────────────────
-
-// LED nodes at every intersection
-let nodeCount=0;
-nodes.forEach(n=>{
-  const color=LED_COLS[Math.floor(rng()*LED_COLS.length)];
-  createLED(n.x, n.z, color);
-  const plat=mkMesh(new THREE.CylinderGeometry(.88,.98,.1,12),{color:0x223300,roughness:.6});
-  plat.position.set(n.x,.05,n.z); scene.add(plat);
-  nodeCount++;
-});
-document.getElementById('nc').textContent=nodeCount;
-
-// Compute block centroids from quad patches
-const compFns=[
-  (x,z)=>createResistor(x,z),
-  (x,z)=>createCapacitor(x,z),
-  (x,z)=>createTransistor(x,z),
-  (x,z)=>createDiode(x,z),
-  (x,z)=>createCrystal(x,z),
-  (x,z)=>createInductor(x,z),
+// ─── PCB TRACES ────────────────────────────────────────────────
+const traces = [
+  // horizontal traces
+  { x1: -7, y1: 0, x2: 7, y2: 0 },
+  { x1: -7, y1: 3, x2: 7, y2: 3 },
+  { x1: -7, y1: -3, x2: 7, y2: -3 },
+  // vertical traces
+  { x1: 0, y1: -7, x2: 0, y2: 7 },
+  { x1: 3, y1: -7, x2: 3, y2: 7 },
+  { x1: -3, y1: -7, x2: -3, y2: 7 },
+  // diagonal connector
+  { x1: -5, y1: -5, x2: -3, y2: -3 },
+  { x1: 5,  y1: -5, x2: 3,  y2: -3 },
+  { x1: -5, y1: 5,  x2: -3, y2: 3  },
+  { x1: 5,  y1: 5,  x2: 3,  y2: 3  },
 ];
 
-for (let r=0; r<ROWS-1; r++){
-  for (let c=0; c<COLS-1; c++){
-    const n0=nodes[r*COLS+c], n1=nodes[r*COLS+c+1],
-          n2=nodes[(r+1)*COLS+c], n3=nodes[(r+1)*COLS+c+1];
-    const cx=(n0.x+n1.x+n2.x+n3.x)/4;
-    const cz=(n0.z+n1.z+n2.z+n3.z)/4;
-    // rough inscribed radius
-    const rMin = Math.min(
-      Math.sqrt((n1.x-n0.x)**2+(n1.z-n0.z)**2),
-      Math.sqrt((n2.x-n0.x)**2+(n2.z-n0.z)**2)
-    ) * 0.36;
+function drawTraces() {
+  traces.forEach(tr => {
+    const p1 = isoToScreen(tr.x1, tr.y1, 0.02);
+    const p2 = isoToScreen(tr.x2, tr.y2, 0.02);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = '#c8a020';
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.55;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
 
-    // anchor component
-    if (rng()<.28) createBGA(cx,cz);
-    else createICChip(cx,cz, .8+rng()*.55);
+    // glow
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = '#ffcc0033';
+    ctx.lineWidth = 7;
+    ctx.stroke();
+  });
+}
 
-    // scattered fill
-    const count = 4+Math.floor(rng()*7);
-    for(let i=0;i<count;i++){
-      const ang=(i/count)*Math.PI*2+(rng()-.5)*.9;
-      const dist=(rng()*.5+.38)*rMin;
-      const px=cx+Math.cos(ang)*dist;
-      const pz=cz+Math.sin(ang)*dist;
-      compFns[Math.floor(rng()*compFns.length)](px,pz);
+// ─── PARTICLES ─────────────────────────────────────────────────
+const particles = [];
+
+function spawnParticle() {
+  const tr = traces[Math.floor(Math.random() * traces.length)];
+  const forward = Math.random() > 0.5;
+  particles.push({
+    tr,
+    progress: forward ? 0 : 1,
+    speed: (0.003 + Math.random() * 0.006) * (forward ? 1 : -1),
+    color: Math.random() > 0.5 ? '#00ff88' : '#ffcc00',
+    size: 2 + Math.random() * 2,
+    life: 1
+  });
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.progress += p.speed;
+    if (p.progress < 0 || p.progress > 1) {
+      particles.splice(i, 1);
+      continue;
     }
-    // extra small passives
-    for(let i=0;i<4;i++){
-      const px=cx+(rng()-.5)*rMin*1.6;
-      const pz=cz+(rng()-.5)*rMin*1.6;
-      rng()<.5 ? createResistor(px,pz) : createDiode(px,pz);
-    }
+    const x = p.tr.x1 + (p.tr.x2 - p.tr.x1) * p.progress;
+    const y = p.tr.y1 + (p.tr.y2 - p.tr.y1) * p.progress;
+    const sc = isoToScreen(x, y, 0.08);
+
+    ctx.beginPath();
+    ctx.arc(sc.x, sc.y, p.size, 0, Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = p.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // trail
+    ctx.beginPath();
+    ctx.arc(sc.x, sc.y, p.size * 3, 0, Math.PI*2);
+    ctx.fillStyle = p.color + '22';
+    ctx.fill();
   }
 }
 
-// ── STREET LIGHTS ─────────────────────────────────────────────────────────────
-allEdges.forEach(key=>{
-  const [ai,bi]=key.split('-').map(Number);
-  const a=nodes[ai], b=nodes[bi];
-  const dx=b.x-a.x, dz=b.z-a.z, len=Math.sqrt(dx*dx+dz*dz);
-  const steps=Math.max(1,Math.floor(len/9));
-  for(let s=1;s<steps;s++){
-    const t=s/steps, px=a.x+dx*t, pz=a.z+dz*t;
-    const nx=-dz/len*1.75, nz=dx/len*1.75;
-    [1,-1].forEach(side=>{
-      const sx=px+nx*side, sz=pz+nz*side;
-      const pole=mkMesh(new THREE.CylinderGeometry(.055,.075,2.3,8),{color:0x445533,roughness:.6});
-      pole.position.set(sx,1.15,sz); scene.add(pole);
-      const bulb=mkMesh(new THREE.SphereGeometry(.14,8,8),{color:0xffffaa,emissive:0xffffaa,emissiveIntensity:2.5});
-      bulb.position.set(sx,2.48,sz); scene.add(bulb);
-      const sl=new THREE.PointLight(0xffeecc,.75,7.5);
-      sl.position.set(sx,2.48,sz); scene.add(sl);
-    });
-  }
-});
+// ─── CHIP (STADIUM CENTER) ─────────────────────────────────────
+function drawChip(gx, gy) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.04);
+  const h = 1.2;
 
-// ── FLOATING PARTICLES ────────────────────────────────────────────────────────
-const PC=380, pPos=new Float32Array(PC*3);
-for(let i=0;i<PC;i++){
-  pPos[i*3]=(rng()-.5)*WORLD*.9;
-  pPos[i*3+1]=rng()*9+.4;
-  pPos[i*3+2]=(rng()-.5)*WORLD*.9;
+  // base
+  drawIsoBox(gx, gy, 0, 4, 4, h, '#9090cc', '#7070aa', '#c0c0ff88');
+
+  // top details — chip lines
+  const top_tl = isoToScreen(gx,   gy,   h);
+  const top_tr = isoToScreen(gx+4, gy,   h);
+  const top_br = isoToScreen(gx+4, gy+4, h);
+  const top_bl = isoToScreen(gx,   gy+4, h);
+
+  // inner square
+  const i1 = isoToScreen(gx+0.5, gy+0.5, h+0.01);
+  const i2 = isoToScreen(gx+3.5, gy+0.5, h+0.01);
+  const i3 = isoToScreen(gx+3.5, gy+3.5, h+0.01);
+  const i4 = isoToScreen(gx+0.5, gy+3.5, h+0.01);
+  ctx.beginPath();
+  ctx.moveTo(i1.x,i1.y); ctx.lineTo(i2.x,i2.y);
+  ctx.lineTo(i3.x,i3.y); ctx.lineTo(i4.x,i4.y);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(40,40,100,${0.7 + pulse*0.3})`;
+  ctx.fill();
+  ctx.strokeStyle = `rgba(180,180,255,${0.4 + pulse*0.4})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // chip pins on sides
+  for (let i = 1; i <= 3; i++) {
+    const ratio = i / 4;
+    // left side pins
+    const pa = isoToScreen(gx + ratio*4, gy - 0.3, h*0.5);
+    const pb = isoToScreen(gx + ratio*4, gy,       h*0.5);
+    ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
+    ctx.strokeStyle = '#c0c0ff'; ctx.lineWidth = 2; ctx.stroke();
+    // right side pins
+    const pc = isoToScreen(gx + ratio*4, gy+4,     h*0.5);
+    const pd = isoToScreen(gx + ratio*4, gy+4.3,   h*0.5);
+    ctx.beginPath(); ctx.moveTo(pc.x,pc.y); ctx.lineTo(pd.x,pd.y); ctx.stroke();
+  }
+
+  // glow
+  const center = isoToScreen(gx+2, gy+2, h);
+  const grad = ctx.createRadialGradient(center.x, center.y, 5, center.x, center.y, 80);
+  grad.addColorStop(0, `rgba(150,150,255,${0.15 + pulse*0.15})`);
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(center.x-100, center.y-60, 200, 120);
 }
-const pGeo=new THREE.BufferGeometry();
-pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-const particles=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x44ff88,size:.07,transparent:true,opacity:.52}));
-scene.add(particles);
 
-// ── RENDER LOOP ───────────────────────────────────────────────────────────────
-let auto=true, t=0;
-controls.addEventListener('start',()=>{ auto=false; });
+// ─── CAPACITOR (SKYSCRAPER) ────────────────────────────────────
+function drawCapacitor(gx, gy, height, color) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.05 + gx * 0.7 + gy * 0.5);
+  const w = 1, d = 1;
 
-(function animate(){
-  requestAnimationFrame(animate);
-  t+=.0022;
-  if(auto){
-    camera.position.x=Math.sin(t*.32)*58;
-    camera.position.z=Math.cos(t*.32)*58;
-    camera.position.y=26+Math.sin(t*.17)*8;
-    camera.lookAt(0,0,0);
+  // body cylinder-ish (using stacked boxes)
+  for (let z = 0; z < height; z++) {
+    const ratio = z / height;
+    const shade = `rgba(${Math.floor(100+ratio*80)},${Math.floor(160+ratio*80)},${Math.floor(200+ratio*55)},1)`;
+    drawIsoBox(gx, gy, z*0.8, w, d, 0.78, shade, '#5599aa', '#aaddff44');
   }
-  const pa=particles.geometry.attributes.position;
-  for(let i=0;i<PC;i++){
-    pa.array[i*3+1]+=.007;
-    if(pa.array[i*3+1]>9.8) pa.array[i*3+1]=.3;
-  }
-  pa.needsUpdate=true;
-  controls.update();
-  renderer.render(scene,camera);
-})();
 
-window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-});
+  // top cap
+  drawIsoBox(gx-0.05, gy-0.05, height*0.8, w+0.1, d+0.1, 0.15, '#ddeeff', '#aaccdd', '#ffffff88');
+
+  // stripe
+  drawIsoBox(gx, gy, height*0.8*0.4, w, d, 0.08, '#ffffff', '#cccccc', 'transparent');
+
+  // top LED glow
+  const top = isoToScreen(gx+0.5, gy+0.5, height*0.8+0.2);
+  ctx.beginPath();
+  ctx.arc(top.x, top.y, 3+pulse*2, 0, Math.PI*2);
+  ctx.fillStyle = `rgba(180,230,255,${0.5+pulse*0.5})`;
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = '#aaddff';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// ─── RESISTOR (BUILDING) ───────────────────────────────────────
+const BAND_COLORS = ['#ff4444','#ffaa00','#ffff44','#44ff44','#4444ff','#aa44ff'];
+
+function drawResistor(gx, gy, height, bands) {
+  const w = 1.2, d = 0.8;
+  drawIsoBox(gx, gy, 0, w, d, height, '#cc9944', '#aa7722', '#ffcc4444');
+
+  // color bands
+  bands.forEach((col, i) => {
+    const z = height * (0.2 + i * 0.2);
+    drawIsoBox(gx, gy, z, w, d, 0.1, col, darken(col, 0.6), 'transparent');
+  });
+
+  // end caps
+  drawIsoBox(gx-0.05, gy-0.05, 0,      w+0.1, d+0.1, 0.1, '#ddbbaa', '#bbaa88', 'transparent');
+  drawIsoBox(gx-0.05, gy-0.05, height-0.05, w+0.1, d+0.1, 0.1, '#ddbbaa', '#bbaa88', 'transparent');
+}
+
+// ─── DIODE (SHOP) ──────────────────────────────────────────────
+function drawDiode(gx, gy) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.08 + gx);
+  drawIsoBox(gx, gy, 0, 1.5, 0.8, 0.7, '#cc4422', '#882211', '#ff664444');
+
+  // stripe (cathode band)
+  drawIsoBox(gx + 1.1, gy, 0, 0.2, 0.8, 0.7, '#dddddd', '#999999', 'transparent');
+
+  // glow
+  const center = isoToScreen(gx+0.75, gy+0.4, 0.7);
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, 4+pulse*3, 0, Math.PI*2);
+  ctx.fillStyle = `rgba(255,100,50,${0.3+pulse*0.3})`;
+  ctx.shadowBlur = 10; ctx.shadowColor = '#ff4400';
+  ctx.fill(); ctx.shadowBlur = 0;
+}
+
+// ─── TRANSISTOR (FACTORY) ─────────────────────────────────────
+function drawTransistor(gx, gy) {
+  // main body
+  drawIsoBox(gx, gy, 0, 1.2, 1.2, 1.5, '#aa66ff', '#7733cc', '#cc88ff44');
+
+  // 3 legs (base, collector, emitter)
+  const legH = 0.4;
+  [0.1, 0.5, 0.9].forEach((offset, i) => {
+    const lx = gx + offset * 1.2;
+    const s = isoToScreen(lx, gy + 1.2, 0);
+    const e = isoToScreen(lx, gy + 1.5, 0);
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y);
+    ctx.strokeStyle = '#888888'; ctx.lineWidth = 3; ctx.stroke();
+  });
+
+  // flat base
+  drawIsoBox(gx - 0.1, gy - 0.1, 0, 1.4, 1.4, 0.15, '#ccaaff', '#9966dd', 'transparent');
+}
+
+// ─── TRANSFORMER (POWER STATION) ──────────────────────────────
+function drawTransformer(gx, gy) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 0.06 + gy);
+  // base platform
+  drawIsoBox(gx, gy, 0, 2.5, 2, 0.2, '#444444', '#333333', '#88888844');
+
+  // primary coil (left cylinder)
+  for (let z = 0; z < 5; z++) {
+    const col = z % 2 === 0 ? '#886622' : '#aa8833';
+    drawIsoBox(gx+0.2, gy+0.4, 0.2+z*0.3, 0.8, 0.8, 0.28, col, darken(col,0.6), 'transparent');
+  }
+  // secondary coil (right cylinder)
+  for (let z = 0; z < 5; z++) {
+    const col = z % 2 === 0 ? '#664488' : '#8855aa';
+    drawIsoBox(gx+1.3, gy+0.4, 0.2+z*0.3, 0.8, 0.8, 0.28, col, darken(col,0.6), 'transparent');
+  }
+
+  // core between
+  drawIsoBox(gx+0.9, gy+0.4, 0.2, 0.5, 0.8, 1.5, '#555555', '#444444', '#aaaaaa22');
+
+  // electric arc glow
+  const arcPos = isoToScreen(gx+1.25, gy+1, 1.8);
+  ctx.beginPath();
+  ctx.arc(arcPos.x, arcPos.y, 6+pulse*5, 0, Math.PI*2);
+  ctx.fillStyle = `rgba(255,220,100,${0.2+pulse*0.4})`;
+  ctx.shadowBlur = 20; ctx.shadowColor = '#ffcc44';
+  ctx.fill(); ctx.shadowBlur = 0;
+}
+
+// ─── CERAMIC CAP (TREE) ────────────────────────────────────────
+function drawCeramicTree(gx, gy, size) {
+  const sway = Math.sin(t * 0.03 + gx * 1.2) * 0.05;
+
+  // stem
+  const sb = isoToScreen(gx+0.5, gy+0.5, 0);
+  const st = isoToScreen(gx+0.5+sway, gy+0.5, size*0.4);
+  ctx.beginPath(); ctx.moveTo(sb.x, sb.y); ctx.lineTo(st.x, st.y);
+  ctx.strokeStyle = '#558844'; ctx.lineWidth = 4; ctx.stroke();
+
+  // ceramic disc (flat round cap)
+  const topCenter = isoToScreen(gx+0.5+sway, gy+0.5, size*0.4);
+  const r = size * 12;
+
+  // disc body
+  ctx.beginPath();
+  ctx.ellipse(topCenter.x, topCenter.y, r, r*0.5, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#33bb55';
+  ctx.shadowBlur = 8; ctx.shadowColor = '#00ff44';
+  ctx.fill(); ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#55dd77';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // highlight
+  ctx.beginPath();
+  ctx.ellipse(topCenter.x - r*0.2, topCenter.y - r*0.15, r*0.4, r*0.2, -0.3, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(150,255,180,0.35)';
+  ctx.fill();
+
+  // small LED dots on tree
+  for (let i = 0; i < 3; i++) {
+    const angle = t * 0.02 + i * (Math.PI * 2 / 3);
+    const lx = topCenter.x + Math.cos(angle) * r * 0.6;
+    const ly = topCenter.y + Math.sin(angle) * r * 0.3;
+    ctx.beginPath();
+    ctx.arc(lx, ly, 2, 0, Math.PI*2);
+    const ledColors = ['#ff4444','#44ff44','#4488ff'];
+    ctx.fillStyle = ledColors[i];
+    ctx.shadowBlur = 6; ctx.shadowColor = ledColors[i];
+    ctx.fill(); ctx.shadowBlur = 0;
+  }
+}
+
+// ─── SOLDER JOINT ─────────────────────────────────────────────
+function drawVia(gx, gy) {
+  const pos = isoToScreen(gx, gy, 0.05);
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#c8a020';
+  ctx.strokeStyle = '#ffcc4488';
+  ctx.lineWidth = 2;
+  ctx.fill(); ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI*2);
+  ctx.fillStyle = '#332200';
+  ctx.fill();
+}
+
+// ─── CITY LAYOUT ──────────────────────────────────────────────
+function drawCity() {
+  // PCB Ground
+  drawGround();
+
+  // Traces
+  drawTraces();
+
+  // Vias / solder joints
+  const viaPoints = [
+    [-3,0],[3,0],[0,-3],[0,3],
+    [-3,3],[3,3],[-3,-3],[3,-3],
+    [0,0.5],[0,-0.5],
+  ];
+  viaPoints.forEach(([x,y]) => drawVia(x-0.5, y-0.5));
+
+  // === TREES (Ceramic Caps) scattered around ===
+  const trees = [
+    [-8, -2, 0.9], [-7,  2, 1.1], [-8,  5, 0.8],
+    [ 7, -3, 1.0], [ 8,  1, 0.9], [ 6,  6, 1.2],
+    [-1, -8, 0.85],[ 2, -7, 1.0], [-4, -7, 0.9],
+    [ 0,  8, 1.1], [-3,  7, 0.9], [ 4,  7, 1.0],
+    [-6, -6, 0.8], [ 5, -6, 0.9],
+    [-9, -5, 0.7], [ 9, -4, 0.75],
+  ];
+  trees.forEach(([x,y,s]) => drawCeramicTree(x, y, s));
+
+  // === RESISTORS — outer ring buildings ===
+  const resistors = [
+    { x: -7, y: -1, h: 1.2, bands: [BAND_COLORS[0], BAND_COLORS[2], BAND_COLORS[4]] },
+    { x: -7, y:  3, h: 0.9, bands: [BAND_COLORS[1], BAND_COLORS[3], BAND_COLORS[0]] },
+    { x:  5, y: -2, h: 1.3, bands: [BAND_COLORS[2], BAND_COLORS[5], BAND_COLORS[1]] },
+    { x:  5, y:  4, h: 1.0, bands: [BAND_COLORS[4], BAND_COLORS[0], BAND_COLORS[3]] },
+    { x: -2, y: -6, h: 1.1, bands: [BAND_COLORS[3], BAND_COLORS[1], BAND_COLORS[5]] },
+    { x:  2, y: -6, h: 0.8, bands: [BAND_COLORS[5], BAND_COLORS[2], BAND_COLORS[0]] },
+    { x: -2, y:  6, h: 1.2, bands: [BAND_COLORS[0], BAND_COLORS[4], BAND_COLORS[2]] },
+    { x:  2, y:  6, h: 0.95, bands: [BAND_COLORS[1], BAND_COLORS[3], BAND_COLORS[4]] },
+  ];
+  resistors.forEach(r => drawResistor(r.x, r.y, r.h, r.bands));
+
+  // === DIODES — commercial strip ===
+  const diodes = [
+    [-6, 0], [-6, 2], [-6, 4],
+    [ 4, 0], [ 4, 2], [ 4, 4],
+  ];
+  diodes.forEach(([x,y]) => drawDiode(x, y));
+
+  // === TRANSISTORS — factory district ===
+  drawTransistor(-5, -4);
+  drawTransistor(-5, -2);
+  drawTransistor( 4, -5);
+  drawTransistor( 3, -4);
+
+  // === TRANSFORMERS — power stations ===
+  drawTransformer(-7, -5);
+  drawTransformer( 5, -6);
+  drawTransformer(-7,  6);
+  drawTransformer( 5,  5);
+
+  // === CAPACITORS — skyscrapers ===
+  const caps = [
+    { x: -4, y: -1, h: 4 }, { x: -4, y:  1, h: 5 },
+    { x:  3, y: -1, h: 4 }, { x:  3, y:  1, h: 5 },
+    { x: -4, y:  3, h: 3 }, { x:  3, y:  3, h: 3 },
+    { x: -1, y: -4, h: 4 }, { x:  1, y: -4, h: 3 },
+    { x: -1, y:  4, h: 4 }, { x:  1, y:  4, h: 3 },
+  ];
+  caps.forEach(c => drawCapacitor(c.x, c.y, c.h));
+
+  // === CHIP CENTER ===
+  drawChip(-2, -2);
+}
+
+// ─── PARTICLES LOOP ───────────────────────────────────────────
+let particleTimer = 0;
+
+// ─── STATS UPDATE ─────────────────────────────────────────────
+function updateStats() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const hh = String(Math.floor(elapsed / 3600)).padStart(2,'0');
+  const mm = String(Math.floor((elapsed % 3600) / 60)).padStart(2,'0');
+  const ss = String(elapsed % 60).padStart(2,'0');
+  document.getElementById('stat-uptime').textContent = `${hh}:${mm}:${ss}`;
+  document.getElementById('stat-current').textContent = (0.48 + 0.04 * Math.sin(t * 0.05)).toFixed(2);
+  document.getElementById('stat-temp').textContent = Math.floor(24 + 2 * Math.sin(t * 0.02));
+}
+
+// ─── BACKGROUND ───────────────────────────────────────────────
+function drawBackground() {
+  const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W, H) * 0.7);
+  grad.addColorStop(0, '#071a0d');
+  grad.addColorStop(1, '#020805');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // stars / noise
+  if (!drawBackground._stars) {
+    drawBackground._stars = Array.from({length: 120}, () => ({
+      x: Math.random() * 2000 - 1000,
+      y: Math.random() * 1200 - 600,
+      r: Math.random() * 1.2,
+      a: Math.random()
+    }));
+  }
+  drawBackground._stars.forEach(s => {
+    const sx = CX + s.x * (W/2000);
+    const sy = CY + s.y * (H/1200);
+    if (sx < 0 || sx > W || sy < 0 || sy > H) return;
+    ctx.beginPath();
+    ctx.arc(sx, sy, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(0,255,80,${s.a * 0.3})`;
+    ctx.fill();
+  });
+}
+
+// ─── MAIN LOOP ────────────────────────────────────────────────
+function loop() {
+  t++;
+
+  drawBackground();
+  drawCity();
+
+  // spawn particles
+  particleTimer++;
+  if (particleTimer % 4 === 0 && particles.length < 60) spawnParticle();
+  updateParticles();
+
+  // update stats every 20 frames
+  if (t % 20 === 0) updateStats();
+
+  requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 </body>
 </html>

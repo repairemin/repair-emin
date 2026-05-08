@@ -1,806 +1,499 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Electronic City 3D</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #0a0e1a; font-family: 'Courier New', monospace; }
-
-        #canvas-container { width: 100vw; height: 100vh; }
-
-        .ui-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10;
-        }
-
-        .top-bar {
-            position: absolute; top: 0; left: 0; right: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
-            padding: 16px 24px;
-            display: flex; align-items: center; gap: 16px;
-        }
-
-        .logo {
-            font-size: 11px; letter-spacing: 4px; color: #00ff88;
-            text-transform: uppercase; font-weight: bold;
-        }
-        .logo span { color: #ff6600; }
-
-        .status-dots { display: flex; gap: 8px; align-items: center; }
-        .dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-        .dot.green { background: #00ff88; }
-        .dot.yellow { background: #ffcc00; animation-delay: 0.5s; }
-        .dot.red { background: #ff4444; animation-delay: 1s; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.8); }
-        }
-
-        .info-panel {
-            position: absolute; bottom: 24px; left: 24px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-            border-radius: 4px; padding: 14px 18px;
-            font-size: 10px; color: #888;
-            line-height: 1.8; letter-spacing: 1px;
-        }
-        .info-panel .val { color: #00ff88; }
-        .info-panel .title { color: #ff6600; font-size: 9px; letter-spacing: 3px; margin-bottom: 6px; }
-
-        .legend {
-            position: absolute; bottom: 24px; right: 24px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid rgba(0, 255, 136, 0.2);
-            border-radius: 4px; padding: 14px 18px;
-            font-size: 9px; letter-spacing: 1px;
-        }
-        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: #888; }
-        .legend-color { width: 10px; height: 10px; border-radius: 2px; }
-
-        .scan-line {
-            position: absolute; top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(0,255,136,0.3), transparent);
-            animation: scan 4s linear infinite;
-        }
-        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-
-        .corner-tl, .corner-tr, .corner-bl, .corner-br {
-            position: absolute; width: 20px; height: 20px;
-            border-color: rgba(0, 255, 136, 0.5);
-            border-style: solid;
-        }
-        .corner-tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
-        .corner-tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
-        .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
-        .corner-br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
-    </style>
+<meta charset="UTF-8">
+<title>Electronic City 3D - Organic</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { overflow:hidden; background:#050810; font-family:'Courier New',monospace; }
+#c { width:100vw; height:100vh; display:block; }
+.ui { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
+.topbar {
+    position:absolute; top:0; left:0; right:0;
+    background:linear-gradient(180deg,rgba(0,0,0,.75) 0%,transparent 100%);
+    padding:14px 22px; display:flex; align-items:center; gap:14px;
+}
+.logo { font-size:11px; letter-spacing:4px; color:#00ff88; font-weight:bold; }
+.logo span { color:#ff6600; }
+.dots { display:flex; gap:7px; }
+.dot { width:6px; height:6px; border-radius:50%; animation:blink 1.6s ease-in-out infinite; }
+.dot.g{background:#00ff88}.dot.y{background:#ffcc00;animation-delay:.5s}.dot.r{background:#ff4444;animation-delay:1s}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.panel{
+    position:absolute; bottom:22px; left:22px;
+    background:rgba(0,0,0,.78); border:1px solid rgba(0,255,136,.25);
+    border-radius:4px; padding:12px 16px; font-size:10px; color:#888; line-height:1.9; letter-spacing:1px;
+}
+.panel .v{color:#00ff88}.panel .t{color:#ff6600;font-size:9px;letter-spacing:3px;margin-bottom:4px}
+.legend{
+    position:absolute; bottom:22px; right:22px;
+    background:rgba(0,0,0,.78); border:1px solid rgba(0,255,136,.2);
+    border-radius:4px; padding:12px 16px; font-size:9px; letter-spacing:1px;
+}
+.li{display:flex;align-items:center;gap:8px;margin-bottom:5px;color:#888}
+.lc{width:9px;height:9px;border-radius:2px}
+.corners span{position:absolute;width:18px;height:18px;border-color:rgba(0,255,136,.45);border-style:solid}
+.corners .tl{top:7px;left:7px;border-width:2px 0 0 2px}
+.corners .tr{top:7px;right:7px;border-width:2px 2px 0 0}
+.corners .bl{bottom:7px;left:7px;border-width:0 0 2px 2px}
+.corners .br{bottom:7px;right:7px;border-width:0 2px 2px 0}
+.scan{position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(0,255,136,.22),transparent);
+    animation:sc 5s linear infinite}
+@keyframes sc{0%{top:0}100%{top:100%}}
+</style>
 </head>
 <body>
-<div id="canvas-container"></div>
-
-<div class="ui-overlay">
-    <div class="scan-line"></div>
-    <div class="corner-tl"></div>
-    <div class="corner-tr"></div>
-    <div class="corner-bl"></div>
-    <div class="corner-br"></div>
-
-    <div class="top-bar">
-        <div class="logo">Electronic <span>City</span> V2.0</div>
-        <div class="status-dots">
-            <div class="dot green"></div>
-            <div class="dot yellow"></div>
-            <div class="dot red"></div>
-        </div>
-    </div>
-
-    <div class="info-panel">
-        <div class="title">// SYSTEM STATUS</div>
-        <div>VOLTAGE &nbsp;&nbsp;<span class="val">5.0V DC</span></div>
-        <div>FREQ &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">100 MHz</span></div>
-        <div>TEMP &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">42°C</span></div>
-        <div>NODES &nbsp;&nbsp;&nbsp;<span class="val" id="node-count">0</span></div>
-    </div>
-
-    <div class="legend">
-        <div class="legend-item"><div class="legend-color" style="background:#1a3a6a"></div>IC CHIP</div>
-        <div class="legend-item"><div class="legend-color" style="background:#2255bb"></div>CAPACITOR</div>
-        <div class="legend-item"><div class="legend-color" style="background:#555"></div>RESISTOR</div>
-        <div class="legend-item"><div class="legend-color" style="background:#884400"></div>TRANSISTOR</div>
-        <div class="legend-item"><div class="legend-color" style="background:#ff4400"></div>LED</div>
-    </div>
+<canvas id="c"></canvas>
+<div class="ui">
+  <div class="scan"></div>
+  <div class="corners">
+    <span class="tl"></span><span class="tr"></span>
+    <span class="bl"></span><span class="br"></span>
+  </div>
+  <div class="topbar">
+    <div class="logo">Electronic <span>City</span> V3.0</div>
+    <div class="dots"><div class="dot g"></div><div class="dot y"></div><div class="dot r"></div></div>
+  </div>
+  <div class="panel">
+    <div class="t">// SYSTEM</div>
+    <div>VOLTAGE &nbsp;<span class="v">5.0V DC</span></div>
+    <div>CLOCK &nbsp;&nbsp;<span class="v">100 MHz</span></div>
+    <div>TEMP &nbsp;&nbsp;&nbsp;<span class="v">42 C</span></div>
+    <div>NODES &nbsp;&nbsp;<span class="v" id="nc">0</span></div>
+  </div>
+  <div class="legend">
+    <div class="li"><div class="lc" style="background:#1a3a6a"></div>IC CHIP</div>
+    <div class="li"><div class="lc" style="background:#2244cc"></div>CAPACITOR</div>
+    <div class="li"><div class="lc" style="background:#887755"></div>RESISTOR</div>
+    <div class="li"><div class="lc" style="background:#221100"></div>TRANSISTOR</div>
+    <div class="li"><div class="lc" style="background:#ff3300"></div>LED NODE</div>
+  </div>
 </div>
 
 <script type="importmap">
-{ "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-}}
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
 </script>
-
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ===== SETUP =====
+// ── deterministic RNG ────────────────────────────────────────────────────────
+let _seed = 137;
+function rng() { _seed = (_seed * 1664525 + 1013904223) & 0xffffffff; return ((_seed >>> 0) / 0xffffffff); }
+
+// ── SETUP ────────────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050810);
-scene.fog = new THREE.FogExp2(0x050810, 0.012);
+scene.fog = new THREE.FogExp2(0x050810, 0.008);
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
-camera.position.set(0, 28, 38);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 600);
+camera.position.set(0, 42, 55);
 camera.lookAt(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
-document.getElementById('canvas-container').appendChild(renderer.domElement);
+renderer.toneMappingExposure = 1.15;
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.minDistance = 10;
-controls.maxDistance = 120;
-controls.maxPolarAngle = Math.PI / 2.1;
-controls.target.set(0, 0, 0);
+controls.minDistance = 8;
+controls.maxDistance = 150;
+controls.maxPolarAngle = Math.PI / 2.05;
 
-// ===== LIGHTING =====
-const ambientLight = new THREE.AmbientLight(0x111827, 3);
-scene.add(ambientLight);
+// ── LIGHTING ──────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0x111827, 3));
+const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+sun.position.set(30, 60, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -95; sun.shadow.camera.right = 95;
+sun.shadow.camera.top  =  95; sun.shadow.camera.bottom= -95;
+sun.shadow.camera.far  = 260;
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x0a1228, 0x0d2010, 1.5));
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-dirLight.position.set(30, 50, 20);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.set(2048, 2048);
-dirLight.shadow.camera.near = 0.5;
-dirLight.shadow.camera.far = 200;
-dirLight.shadow.camera.left = -80;
-dirLight.shadow.camera.right = 80;
-dirLight.shadow.camera.top = 80;
-dirLight.shadow.camera.bottom = -80;
-scene.add(dirLight);
+// ── SHARED MATERIALS ──────────────────────────────────────────────────────────
+const MATS = {
+  pcb:   new THREE.MeshStandardMaterial({ color:0x0c2209, roughness:.65, metalness:.1 }),
+  trace: new THREE.MeshStandardMaterial({ color:0x1a6617, roughness:.3, metalness:.4, emissive:0x0a3308, emissiveIntensity:.4 }),
+  gold:  new THREE.MeshStandardMaterial({ color:0xc8960c, roughness:.1, metalness:1.0 }),
+  silver:new THREE.MeshStandardMaterial({ color:0xcccccc, roughness:.1, metalness:.95 }),
+  road:  new THREE.MeshStandardMaterial({ color:0x0f1800, roughness:.95 }),
+};
 
-// Subtle fill light from below
-const fillLight = new THREE.HemisphereLight(0x0a1228, 0x1a2a10, 1.2);
-scene.add(fillLight);
+function mkMat(props){ return new THREE.MeshStandardMaterial(props); }
+function mkMesh(geo, matOrProps, castShadow=false){
+  const mat = (matOrProps instanceof THREE.Material) ? matOrProps : mkMat(matOrProps);
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = castShadow; m.receiveShadow = true;
+  return m;
+}
+function addAt(obj, x, y, z){ obj.position.set(x,y,z); scene.add(obj); }
 
-// ===== MATERIALS =====
-const pcbMat = new THREE.MeshStandardMaterial({ color: 0x0d2b0d, roughness: 0.6, metalness: 0.1 });
-const pcbLineMat = new THREE.MeshStandardMaterial({ color: 0x1a6617, roughness: 0.4, metalness: 0.3, emissive: 0x0a3308, emissiveIntensity: 0.3 });
-const goldMat = new THREE.MeshStandardMaterial({ color: 0xc8960c, roughness: 0.2, metalness: 0.9 });
-const silverMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.15, metalness: 0.95 });
-const roadMat = new THREE.MeshStandardMaterial({ color: 0x1a2200, roughness: 0.9 });
-const roadLineMat = new THREE.MeshStandardMaterial({ color: 0xaaff44, roughness: 0.5, emissive: 0x44aa00, emissiveIntensity: 0.6 });
-
-// ===== PCB BASE =====
-const pcbSize = 80;
-const pcbThick = 0.6;
-const pcbBase = new THREE.Mesh(
-    new THREE.BoxGeometry(pcbSize, pcbThick, pcbSize),
-    pcbMat
-);
+// ── PCB BASE ──────────────────────────────────────────────────────────────────
+const WORLD = 96;
+const pcbBase = mkMesh(new THREE.BoxGeometry(WORLD, .6, WORLD), MATS.pcb);
 pcbBase.receiveShadow = true;
-pcbBase.position.y = -pcbThick / 2;
+pcbBase.position.y = -.3;
 scene.add(pcbBase);
 
-// ===== CITY GRID LAYOUT =====
-// Road system: main avenues + intersections
-const BLOCK_SIZE = 14;    // kích thước 1 ô phố
-const ROAD_WIDTH = 2.5;   // độ rộng đường
-const GRID_COUNT = 4;     // 4x4 blocks
-const HALF = (GRID_COUNT * BLOCK_SIZE) / 2;
+// ── ORGANIC ROAD NETWORK ──────────────────────────────────────────────────────
+// Grid of intersection nodes with organic jitter
+const COLS = 8, ROWS = 8, STEP = 11;
+const nodes = [];
 
-// Vẽ đường ngang dọc
-function createRoadSegment(x1, z1, x2, z2) {
-    const dx = x2 - x1, dz = z2 - z1;
-    const length = Math.sqrt(dx*dx + dz*dz);
-    const angle = Math.atan2(dz, dx);
-    const road = new THREE.Mesh(
-        new THREE.PlaneGeometry(length, ROAD_WIDTH),
-        roadMat
-    );
-    road.rotation.x = -Math.PI / 2;
-    road.rotation.z = -angle;
-    road.position.set((x1+x2)/2, 0.02, (z1+z2)/2);
-    road.receiveShadow = true;
-    scene.add(road);
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const bx = (c - (COLS-1)/2) * STEP;
+    const bz = (r - (ROWS-1)/2) * STEP;
+    // border = small jitter, interior = large jitter  
+    const border = (r===0 || r===ROWS-1 || c===0 || c===COLS-1);
+    const jx = (rng()-.5) * (border ? 2.5 : 6.0);
+    const jz = (rng()-.5) * (border ? 2.5 : 6.0);
+    nodes.push({ x: bx+jx, z: bz+jz, id: nodes.length });
+  }
 }
 
-// Tạo lưới đường
-for (let i = 0; i <= GRID_COUNT; i++) {
-    const pos = -HALF + i * BLOCK_SIZE;
-    // đường dọc
-    createRoadSegment(pos, -HALF, pos, HALF);
-    // đường ngang
-    createRoadSegment(-HALF, pos, HALF, pos);
+// Edges: grid neighbors + occasional diagonals  
+const edgeSet = new Set();
+function eKey(a,b){ return a<b?`${a}-${b}`:`${b}-${a}`; }
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const i = r*COLS+c;
+    if (c < COLS-1) edgeSet.add(eKey(i, i+1));          // right
+    if (r < ROWS-1) edgeSet.add(eKey(i, i+COLS));        // down
+    // sparse diagonals — gives irregular blocks
+    if (c < COLS-1 && r < ROWS-1 && rng() < 0.25) edgeSet.add(eKey(i, i+COLS+1));
+    if (c > 0       && r < ROWS-1 && rng() < 0.25) edgeSet.add(eKey(i, i+COLS-1));
+  }
 }
 
-// Vạch kẻ đường (copper traces)
-function createTrace(x1, z1, x2, z2, width = 0.12) {
-    const dx = x2-x1, dz = z2-z1;
-    const len = Math.sqrt(dx*dx+dz*dz);
-    const tr = new THREE.Mesh(new THREE.PlaneGeometry(len, width), pcbLineMat);
-    tr.rotation.x = -Math.PI/2;
-    tr.rotation.z = -Math.atan2(dz, dx);
-    tr.position.set((x1+x2)/2, 0.04, (z1+z2)/2);
+const ROAD_W = 2.2;
+const allEdges = [...edgeSet];
+
+// Draw roads and PCB traces
+allEdges.forEach(key => {
+  const [ai,bi] = key.split('-').map(Number);
+  const a = nodes[ai], b = nodes[bi];
+  const dx=b.x-a.x, dz=b.z-a.z, len=Math.sqrt(dx*dx+dz*dz);
+  const ang = -Math.atan2(dz, dx);
+
+  const road = mkMesh(new THREE.PlaneGeometry(len, ROAD_W), MATS.road);
+  road.rotation.x = -Math.PI/2; road.rotation.z = ang;
+  road.position.set((a.x+b.x)/2, .01, (a.z+b.z)/2);
+  road.receiveShadow = true;
+  scene.add(road);
+
+  // copper traces alongside road
+  [-0.55, 0, 0.55].forEach(off => {
+    const perp = Math.atan2(dz, dx) + Math.PI/2;
+    const ox = Math.cos(perp)*off, oz = Math.sin(perp)*off;
+    const tr = mkMesh(new THREE.PlaneGeometry(len-.2, .09), MATS.trace);
+    tr.rotation.x = -Math.PI/2; tr.rotation.z = ang;
+    tr.position.set((a.x+b.x)/2+ox, .033, (a.z+b.z)/2+oz);
     scene.add(tr);
-}
-
-// PCB trace dọc theo đường phố
-for (let i = 0; i <= GRID_COUNT; i++) {
-    const pos = -HALF + i * BLOCK_SIZE;
-    for (let d = -0.6; d <= 0.6; d += 0.3) {
-        createTrace(pos + d, -HALF, pos + d, HALF);
-        createTrace(-HALF, pos + d, HALF, pos + d);
-    }
-}
-
-// Thêm trace chéo ngẫu nhiên trong block
-for (let ix = 0; ix < GRID_COUNT; ix++) {
-    for (let iz = 0; iz < GRID_COUNT; iz++) {
-        const bx = -HALF + ix * BLOCK_SIZE + BLOCK_SIZE/2;
-        const bz = -HALF + iz * BLOCK_SIZE + BLOCK_SIZE/2;
-        // vài trace ngang dọc trong block
-        for (let t = 0; t < 5; t++) {
-            const rx = bx + (Math.random()-0.5) * (BLOCK_SIZE-3);
-            const rz = bz + (Math.random()-0.5) * (BLOCK_SIZE-3);
-            const len = Math.random()*3+1;
-            if (Math.random() > 0.5)
-                createTrace(rx-len/2, rz, rx+len/2, rz);
-            else
-                createTrace(rx, rz-len/2, rx, rz+len/2);
-        }
-    }
-}
-
-// Solder pads (via) tại giao điểm trace
-for (let ix = 0; ix < GRID_COUNT; ix++) {
-    for (let iz = 0; iz < GRID_COUNT; iz++) {
-        const bx = -HALF + ix * BLOCK_SIZE + BLOCK_SIZE/2;
-        const bz = -HALF + iz * BLOCK_SIZE + BLOCK_SIZE/2;
-        for (let t = 0; t < 8; t++) {
-            const pad = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8),
-                goldMat
-            );
-            pad.position.set(bx+(Math.random()-0.5)*10, 0.03, bz+(Math.random()-0.5)*10);
-            scene.add(pad);
-        }
-    }
-}
-
-// ===== COMPONENT BUILDERS =====
-
-// --- IC CHIP (QFP package) ---
-function createICChip(x, z, scale = 1) {
-    const g = new THREE.Group();
-    const w = 3.5*scale, h = 0.5*scale, d = 3.5*scale;
-
-    // Body
-    const body = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, d),
-        new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.3, metalness: 0.1 })
-    );
-    body.castShadow = true;
-    g.add(body);
-
-    // Top marking (silkscreen)
-    const mark = new THREE.Mesh(
-        new THREE.PlaneGeometry(w*0.7, d*0.7),
-        new THREE.MeshStandardMaterial({ color: 0x1a2a44, roughness: 0.5 })
-    );
-    mark.rotation.x = -Math.PI/2;
-    mark.position.y = h/2 + 0.01;
-    g.add(mark);
-
-    // Pin 1 dot
-    const dot = new THREE.Mesh(
-        new THREE.CircleGeometry(0.12*scale, 8),
-        new THREE.MeshStandardMaterial({ color: 0x88aadd })
-    );
-    dot.rotation.x = -Math.PI/2;
-    dot.position.set(-w*0.28, h/2+0.01, -d*0.28);
-    g.add(dot);
-
-    // Pins on all 4 sides
-    const pinMat = new THREE.MeshStandardMaterial({ color: 0xc8960c, roughness: 0.1, metalness: 1.0 });
-    const pinCount = Math.floor(5 * scale);
-    const pinSpacing = (d * 0.7) / (pinCount - 1);
-    const sides = [
-        { axis: 'x', dir: 1,  baseZ: true  },
-        { axis: 'x', dir: -1, baseZ: true  },
-        { axis: 'z', dir: 1,  baseZ: false },
-        { axis: 'z', dir: -1, baseZ: false },
-    ];
-    sides.forEach(({ axis, dir, baseZ }) => {
-        for (let i = 0; i < pinCount; i++) {
-            const offset = -d*0.35 + i * pinSpacing;
-            const pin = new THREE.Mesh(
-                new THREE.BoxGeometry(0.08*scale, 0.3*scale, 0.25*scale),
-                pinMat
-            );
-            if (axis === 'x') {
-                pin.position.set(dir*(w/2 + 0.18*scale), -0.05*scale, offset);
-                pin.rotation.z = dir * 0.2;
-            } else {
-                pin.rotation.y = Math.PI/2;
-                pin.position.set(offset, -0.05*scale, dir*(d/2 + 0.18*scale));
-                pin.rotation.z = 0.2;
-            }
-            g.add(pin);
-        }
-    });
-
-    g.position.set(x, h/2, z);
-    scene.add(g);
-    return g;
-}
-
-// --- ELECTROLYTIC CAPACITOR ---
-function createCapacitor(x, z, colorHex = 0x1133cc) {
-    const g = new THREE.Group();
-    const r = 0.55, h = 1.8 + Math.random() * 1.0;
-
-    const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, h, 24),
-        new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3, metalness: 0.1 })
-    );
-    body.castShadow = true;
-    g.add(body);
-
-    // Top aluminum cap with cross mark
-    const topCap = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r, 0.08, 24),
-        new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.2, metalness: 0.9 })
-    );
-    topCap.position.y = h/2 + 0.04;
-    g.add(topCap);
-
-    // Cross vent mark on top
-    [0, Math.PI/2].forEach(rot => {
-        const vent = new THREE.Mesh(
-            new THREE.BoxGeometry(r*1.5, 0.02, 0.06),
-            new THREE.MeshStandardMaterial({ color: 0x666666 })
-        );
-        vent.rotation.y = rot;
-        vent.position.y = h/2 + 0.09;
-        g.add(vent);
-    });
-
-    // Polarity stripe
-    const stripe = new THREE.Mesh(
-        new THREE.CylinderGeometry(r+0.01, r+0.01, h*0.6, 24, 1, true,
-            Math.PI * 1.7, Math.PI * 0.6),
-        new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.5, side: THREE.FrontSide })
-    );
-    stripe.position.y = 0;
-    g.add(stripe);
-
-    // Leads
-    [-0.2, 0.2].forEach((ox, i) => {
-        const lead = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.04, 0.04, 0.6, 8),
-            silverMat
-        );
-        lead.position.set(ox, -h/2 - 0.3, 0);
-        g.add(lead);
-    });
-
-    g.position.set(x, h/2, z);
-    scene.add(g);
-    return g;
-}
-
-// --- RESISTOR (axial) ---
-function createResistor(x, z) {
-    const g = new THREE.Group();
-    const bands = [
-        [0xff0000, 0xff8800, 0xffff00, 0x884400][Math.floor(Math.random()*4)],
-        [0x0000ff, 0x00aa00, 0x888888][Math.floor(Math.random()*3)],
-        [0xffaa00, 0xff0000][Math.floor(Math.random()*2)]
-    ];
-
-    const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.22, 0.22, 1.0, 16),
-        new THREE.MeshStandardMaterial({ color: 0xd4aa77, roughness: 0.8 })
-    );
-    body.rotation.z = Math.PI/2;
-    body.castShadow = true;
-    g.add(body);
-
-    // Color bands
-    bands.forEach((col, i) => {
-        const band = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.23, 0.23, 0.1, 16),
-            new THREE.MeshStandardMaterial({ color: col, roughness: 0.6 })
-        );
-        band.rotation.z = Math.PI/2;
-        band.position.x = -0.3 + i * 0.25;
-        g.add(band);
-    });
-
-    // Gold tolerance band
-    const goldBand = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.23, 0.23, 0.08, 16),
-        goldMat
-    );
-    goldBand.rotation.z = Math.PI/2;
-    goldBand.position.x = 0.38;
-    g.add(goldBand);
-
-    // Leads
-    [-1, 1].forEach(dir => {
-        const lead = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.035, 0.035, 0.7, 8),
-            silverMat
-        );
-        lead.rotation.z = Math.PI/2;
-        lead.position.x = dir * 0.85;
-        g.add(lead);
-    });
-
-    g.position.set(x, 0.28, z);
-    g.rotation.y = Math.random() * Math.PI;
-    scene.add(g);
-    return g;
-}
-
-// --- TRANSISTOR (TO-92 package) ---
-function createTransistor(x, z) {
-    const g = new THREE.Group();
-    const h = 1.2;
-
-    // Body (flat side facing front)
-    const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.35, 0.35, h, 20),
-        new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 })
-    );
-    body.castShadow = true;
-    g.add(body);
-
-    // Flat face on body
-    const flat = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.62, h),
-        new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 })
-    );
-    flat.position.set(0.33, 0, 0);
-    flat.rotation.y = Math.PI/2;
-    g.add(flat);
-
-    // Part number on flat
-    const label = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.45, 0.3),
-        new THREE.MeshStandardMaterial({ color: 0x333355 })
-    );
-    label.position.set(0.335, 0.1, 0);
-    label.rotation.y = Math.PI/2;
-    g.add(label);
-
-    // 3 leads: B, C, E
-    const leadPositions = [[-0.15, 0], [0, 0], [0.15, 0]];
-    leadPositions.forEach(([ox, oz]) => {
-        const lead = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8),
-            silverMat
-        );
-        lead.position.set(ox, -h/2 - 0.5, oz);
-        g.add(lead);
-    });
-
-    g.position.set(x, h/2, z);
-    g.rotation.y = Math.random() * Math.PI * 2;
-    scene.add(g);
-    return g;
-}
-
-// --- LED (5mm round) ---
-function createLED(x, z, color = 0xff2200) {
-    const g = new THREE.Group();
-    const emissiveCol = color;
-
-    // Dome
-    const dome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.35, 16, 16, 0, Math.PI*2, 0, Math.PI/2),
-        new THREE.MeshStandardMaterial({
-            color: color, roughness: 0.1, metalness: 0,
-            emissive: color, emissiveIntensity: 1.2,
-            transparent: true, opacity: 0.85
-        })
-    );
-    dome.position.y = 0.55;
-    g.add(dome);
-
-    // Flat base collar
-    const collar = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.36, 0.36, 0.55, 16),
-        new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.3, metalness: 0.5 })
-    );
-    collar.position.y = 0.275;
-    g.add(collar);
-
-    // Leads
-    [[-0.12, 1.1], [0.12, 0.85]].forEach(([ox, lh]) => {
-        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,lh,8), silverMat);
-        lead.position.set(ox, -(lh/2), 0);
-        g.add(lead);
-    });
-
-    // Point light glow
-    const glow = new THREE.PointLight(color, 2, 5);
-    glow.position.y = 0.9;
-    g.add(glow);
-
-    g.position.set(x, 0, z);
-    scene.add(g);
-    return g;
-}
-
-// --- DIODE ---
-function createDiode(x, z) {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18, 0.18, 0.8, 16),
-        new THREE.MeshStandardMaterial({ color: 0x2222aa, roughness: 0.3 })
-    );
-    body.rotation.z = Math.PI/2;
-    body.castShadow = true;
-    g.add(body);
-
-    // Cathode stripe
-    const stripe = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.19, 0.19, 0.1, 16),
-        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 })
-    );
-    stripe.rotation.z = Math.PI/2;
-    stripe.position.x = 0.3;
-    g.add(stripe);
-
-    // Leads
-    [-1,1].forEach(dir => {
-        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.55,8), silverMat);
-        lead.rotation.z = Math.PI/2;
-        lead.position.x = dir*0.68;
-        g.add(lead);
-    });
-    g.position.set(x, 0.22, z);
-    g.rotation.y = Math.random()*Math.PI;
-    scene.add(g);
-    return g;
-}
-
-// --- CRYSTAL OSCILLATOR ---
-function createCrystal(x, z) {
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.35, 1.4),
-        new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.1, metalness: 0.9 })
-    );
-    body.castShadow = true;
-    g.add(body);
-    [-0.55, 0.55].forEach(oz => {
-        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.6,8), silverMat);
-        pin.position.set(0, -0.3, oz);
-        g.add(pin);
-    });
-    g.position.set(x, 0.175, z);
-    g.rotation.y = Math.random()*Math.PI;
-    scene.add(g);
-}
-
-// --- BGA CHIP (large IC with solder balls) ---
-function createBGA(x, z) {
-    const g = new THREE.Group();
-    const w = 5.5, h = 0.5, d = 5.5;
-    const body = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, d),
-        new THREE.MeshStandardMaterial({ color: 0x0d1020, roughness: 0.2, metalness: 0.1 })
-    );
-    body.castShadow = true;
-    g.add(body);
-
-    // Die outline
-    const die = new THREE.Mesh(
-        new THREE.BoxGeometry(w*0.7, h+0.05, d*0.7),
-        new THREE.MeshStandardMaterial({ color: 0x1a2a55, roughness: 0.4 })
-    );
-    die.position.y = 0.01;
-    g.add(die);
-
-    // Solder balls grid
-    const ballMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.1, metalness: 0.95 });
-    for (let bi = -2; bi <= 2; bi++) {
-        for (let bj = -2; bj <= 2; bj++) {
-            const ball = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), ballMat);
-            ball.position.set(bi*0.9, -h/2-0.1, bj*0.9);
-            g.add(ball);
-        }
-    }
-
-    // Labels
-    const label = new THREE.Mesh(
-        new THREE.PlaneGeometry(w*0.6, d*0.25),
-        new THREE.MeshStandardMaterial({ color: 0x334488, roughness: 0.5 })
-    );
-    label.rotation.x = -Math.PI/2;
-    label.position.y = h/2+0.01;
-    g.add(label);
-
-    g.position.set(x, h/2, z);
-    scene.add(g);
-}
-
-// --- INDUCTOR (toroid) ---
-function createInductor(x, z) {
-    const g = new THREE.Group();
-    const core = new THREE.Mesh(
-        new THREE.TorusGeometry(0.45, 0.18, 10, 20),
-        new THREE.MeshStandardMaterial({ color: 0x442200, roughness: 0.6 })
-    );
-    core.rotation.x = Math.PI/2;
-    g.add(core);
-    // Wire windings
-    for (let i = 0; i < 12; i++) {
-        const angle = (i / 12) * Math.PI * 2;
-        const winding = new THREE.Mesh(
-            new THREE.TorusGeometry(0.45, 0.04, 6, 6,  Math.PI * 0.3),
-            new THREE.MeshStandardMaterial({ color: 0xc8960c, roughness: 0.2, metalness: 0.9 })
-        );
-        winding.rotation.x = Math.PI/2;
-        winding.rotation.z = angle;
-        g.add(winding);
-    }
-    g.position.set(x, 0.3, z);
-    scene.add(g);
-}
-
-// ===== INTERSECTION LED CLUSTERS =====
-const ledColors = [0xff2200, 0x00ff44, 0x0066ff, 0xffcc00, 0xff00ff, 0x00ffff];
-let nodeCount = 0;
-
-for (let ix = 0; ix <= GRID_COUNT; ix++) {
-    for (let iz = 0; iz <= GRID_COUNT; iz++) {
-        const x = -HALF + ix * BLOCK_SIZE;
-        const z = -HALF + iz * BLOCK_SIZE;
-        // LED cluster at each intersection
-        const color = ledColors[Math.floor(Math.random() * ledColors.length)];
-        createLED(x, z, color);
-        // Small platform for LED cluster
-        const plat = new THREE.Mesh(
-            new THREE.CylinderGeometry(1.0, 1.1, 0.12, 12),
-            new THREE.MeshStandardMaterial({ color: 0x334400, roughness: 0.5 })
-        );
-        plat.position.set(x, 0.06, z);
-        scene.add(plat);
-        nodeCount++;
-    }
-}
-
-document.getElementById('node-count').textContent = nodeCount;
-
-// ===== POPULATE BLOCKS WITH COMPONENTS =====
-const componentTypes = ['ic', 'cap', 'res', 'trans', 'bga', 'crystal', 'diode', 'inductor'];
-
-for (let ix = 0; ix < GRID_COUNT; ix++) {
-    for (let iz = 0; iz < GRID_COUNT; iz++) {
-        const bx = -HALF + ix * BLOCK_SIZE + BLOCK_SIZE/2;
-        const bz = -HALF + iz * BLOCK_SIZE + BLOCK_SIZE/2;
-        const inner = BLOCK_SIZE/2 - 2.5;
-
-        // Main component at block center (large)
-        const mainType = componentTypes[Math.floor(Math.random() * 3)]; // ic, cap, bga
-        if (mainType === 'bga' || (ix + iz) % 2 === 0) {
-            if ((ix + iz) % 3 === 0) createBGA(bx, bz);
-            else createICChip(bx, bz, 1.3);
-        } else {
-            createICChip(bx, bz, 1.0);
-        }
-
-        // Surrounding components
-        const count = 5 + Math.floor(Math.random() * 6);
-        for (let c = 0; c < count; c++) {
-            const rx = bx + (Math.random()-0.5) * inner * 2;
-            const rz = bz + (Math.random()-0.5) * inner * 2;
-            const type = componentTypes[Math.floor(Math.random() * componentTypes.length)];
-            switch(type) {
-                case 'cap':
-                    createCapacitor(rx, rz, ledColors[Math.floor(Math.random()*ledColors.length)]);
-                    break;
-                case 'res': createResistor(rx, rz); break;
-                case 'trans': createTransistor(rx, rz); break;
-                case 'crystal': createCrystal(rx, rz); break;
-                case 'diode': createDiode(rx, rz); break;
-                case 'inductor': createInductor(rx, rz); break;
-                default: createICChip(rx, rz, 0.7);
-            }
-        }
-    }
-}
-
-// ===== STREET LIGHTS (glowing poles) =====
-for (let ix = 0; ix < GRID_COUNT; ix++) {
-    for (let iz = 0; iz <= GRID_COUNT; iz++) {
-        [[ix, iz], [ix+0.5, iz]].forEach(([bxi, bzi]) => {
-            const sx = -HALF + bxi * BLOCK_SIZE + BLOCK_SIZE/2;
-            const sz = -HALF + bzi * BLOCK_SIZE - ROAD_WIDTH;
-            const pole = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.06, 0.08, 2.5, 8),
-                new THREE.MeshStandardMaterial({ color: 0x556644, roughness: 0.5 })
-            );
-            pole.position.set(sx, 1.25, sz);
-            scene.add(pole);
-            const bulb = new THREE.Mesh(
-                new THREE.SphereGeometry(0.18, 8, 8),
-                new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffffaa, emissiveIntensity: 2 })
-            );
-            bulb.position.set(sx, 2.6, sz);
-            scene.add(bulb);
-            const streetLight = new THREE.PointLight(0xffffee, 1.0, 8);
-            streetLight.position.set(sx, 2.6, sz);
-            scene.add(streetLight);
-        });
-    }
-}
-
-// ===== ATMOSPHERE: floating particles =====
-const particleCount = 300;
-const pGeo = new THREE.BufferGeometry();
-const pPositions = new Float32Array(particleCount * 3);
-for (let i = 0; i < particleCount; i++) {
-    pPositions[i*3]   = (Math.random()-0.5)*pcbSize;
-    pPositions[i*3+1] = Math.random()*8 + 0.5;
-    pPositions[i*3+2] = (Math.random()-0.5)*pcbSize;
-}
-pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
-const pMat = new THREE.PointsMaterial({ color: 0x44ff88, size: 0.08, transparent: true, opacity: 0.6 });
-const particles = new THREE.Points(pGeo, pMat);
-scene.add(particles);
-
-// ===== ANIMATE =====
-let autoOrbit = true;
-let t = 0;
-
-controls.addEventListener('start', () => { autoOrbit = false; });
-
-function animate() {
-    requestAnimationFrame(animate);
-    t += 0.003;
-
-    if (autoOrbit) {
-        camera.position.x = Math.sin(t * 0.4) * 45;
-        camera.position.z = Math.cos(t * 0.4) * 45;
-        camera.position.y = 22 + Math.sin(t * 0.2) * 6;
-        camera.lookAt(0, 0, 0);
-    }
-
-    // Animate particles (drift upward slowly)
-    const pos = particles.geometry.attributes.position;
-    for (let i = 0; i < particleCount; i++) {
-        pos.array[i*3+1] += 0.01;
-        if (pos.array[i*3+1] > 9) pos.array[i*3+1] = 0.3;
-    }
-    pos.needsUpdate = true;
-
-    controls.update();
-    renderer.render(scene, camera);
-}
-
-window.addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+  });
 });
 
-animate();
+// PCB solder pads and random traces
+for (let i=0; i<240; i++){
+  const pad = mkMesh(new THREE.CylinderGeometry(.13,.13,.04,8), MATS.gold);
+  pad.position.set((rng()-.5)*WORLD*.88, .02, (rng()-.5)*WORLD*.88);
+  scene.add(pad);
+}
+for (let i=0; i<130; i++){
+  const cx=(rng()-.5)*WORLD*.84, cz=(rng()-.5)*WORLD*.84;
+  const a=rng()*Math.PI, l=rng()*4+.8;
+  const tr = mkMesh(new THREE.PlaneGeometry(l,.08), MATS.trace);
+  tr.rotation.x=-Math.PI/2; tr.rotation.z=a;
+  tr.position.set(cx,.04,cz);
+  scene.add(tr);
+}
+
+// ── COMPONENT FACTORIES ───────────────────────────────────────────────────────
+
+function createICChip(x, z, scale=1){
+  const g=new THREE.Group();
+  const w=3.4*scale, h=.48*scale, d=3.4*scale;
+  const body=mkMesh(new THREE.BoxGeometry(w,h,d),{color:0x111827,roughness:.3,metalness:.1},true);
+  g.add(body);
+  const mark=mkMesh(new THREE.PlaneGeometry(w*.65,d*.65),{color:0x1a2a44,roughness:.5});
+  mark.rotation.x=-Math.PI/2; mark.position.y=h/2+.01; g.add(mark);
+  const dot=mkMesh(new THREE.CircleGeometry(.11*scale,8),{color:0x88aadd});
+  dot.rotation.x=-Math.PI/2; dot.position.set(-w*.27,h/2+.01,-d*.27); g.add(dot);
+  const pMat=mkMat({color:0xc8960c,roughness:.1,metalness:1.0});
+  const n=Math.floor(5*scale), sp=(d*.7)/(n-1);
+  [[ 1,'x'],[-1,'x'],[ 1,'z'],[-1,'z']].forEach(([dir,ax])=>{
+    for(let i=0;i<n;i++){
+      const off=-d*.35+i*sp;
+      const p=new THREE.Mesh(new THREE.BoxGeometry(.08*scale,.28*scale,.2*scale),pMat);
+      if(ax==='x'){ p.position.set(dir*(w/2+.17*scale),-.04*scale,off); p.rotation.z=dir*.2; }
+      else { p.rotation.y=Math.PI/2; p.position.set(off,-.04*scale,dir*(d/2+.17*scale)); }
+      g.add(p);
+    }
+  });
+  addAt(g,x,h/2,z); return g;
+}
+
+function createBGA(x,z){
+  const g=new THREE.Group(), w=5.4, h=.48, d=5.4;
+  const body=mkMesh(new THREE.BoxGeometry(w,h,d),{color:0x0d1020,roughness:.2,metalness:.1},true);
+  g.add(body);
+  const die=mkMesh(new THREE.BoxGeometry(w*.68,h+.05,d*.68),{color:0x1a2a55,roughness:.4});
+  die.position.y=.01; g.add(die);
+  const bMat=mkMat({color:0xd4af37,roughness:.1,metalness:.95});
+  for(let bi=-2;bi<=2;bi++) for(let bj=-2;bj<=2;bj++){
+    const ball=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),bMat);
+    ball.position.set(bi*.88,-h/2-.09,bj*.88); g.add(ball);
+  }
+  const lbl=mkMesh(new THREE.PlaneGeometry(w*.55,d*.2),{color:0x334488});
+  lbl.rotation.x=-Math.PI/2; lbl.position.y=h/2+.01; g.add(lbl);
+  addAt(g,x,h/2,z); return g;
+}
+
+const CAP_COLORS=[0x1133cc,0x2244aa,0xcc3300,0x226622,0x554400,0x332255,0x005577,0xaa2200];
+function createCapacitor(x,z,color){
+  if(!color) color=CAP_COLORS[Math.floor(rng()*CAP_COLORS.length)];
+  const g=new THREE.Group(), r=.52, h=1.55+rng()*.95;
+  const body=mkMesh(new THREE.CylinderGeometry(r,r,h,24),{color,roughness:.3,metalness:.1},true);
+  g.add(body);
+  const top=mkMesh(new THREE.CylinderGeometry(r,r,.07,24),{color:0xaaaaaa,roughness:.2,metalness:.9});
+  top.position.y=h/2+.035; g.add(top);
+  [0,Math.PI/2].forEach(rot=>{
+    const v=mkMesh(new THREE.BoxGeometry(r*1.4,.025,.055),{color:0x666666});
+    v.rotation.y=rot; v.position.y=h/2+.08; g.add(v);
+  });
+  const stripe=new THREE.Mesh(
+    new THREE.CylinderGeometry(r+.01,r+.01,h*.55,24,1,true,Math.PI*1.7,Math.PI*.6),
+    mkMat({color:0xdddddd,roughness:.5,side:THREE.FrontSide})
+  );
+  g.add(stripe);
+  [-.18,.18].forEach(ox=>{
+    const l=mkMesh(new THREE.CylinderGeometry(.04,.04,.55,8),MATS.silver);
+    l.position.set(ox,-h/2-.27,0); g.add(l);
+  });
+  addAt(g,x,h/2,z); return g;
+}
+
+function createResistor(x,z){
+  const g=new THREE.Group();
+  const bc=[[0xff0000,0xff8800,0xffff00,0x884400],[0x0000ff,0x00aa00,0x888888],[0xffaa00,0xff0000]];
+  const bands=[bc[0][Math.floor(rng()*4)], bc[1][Math.floor(rng()*3)], bc[2][Math.floor(rng()*2)]];
+  const body=mkMesh(new THREE.CylinderGeometry(.21,.21,.9,16),{color:0xd4aa77,roughness:.8},true);
+  body.rotation.z=Math.PI/2; g.add(body);
+  bands.forEach((c,i)=>{
+    const b=mkMesh(new THREE.CylinderGeometry(.215,.215,.09,16),{color:c,roughness:.6});
+    b.rotation.z=Math.PI/2; b.position.x=-.26+i*.24; g.add(b);
+  });
+  const gb=mkMesh(new THREE.CylinderGeometry(.215,.215,.07,16),MATS.gold);
+  gb.rotation.z=Math.PI/2; gb.position.x=.35; g.add(gb);
+  [-1,1].forEach(d=>{
+    const l=mkMesh(new THREE.CylinderGeometry(.033,.033,.62,8),MATS.silver);
+    l.rotation.z=Math.PI/2; l.position.x=d*.8; g.add(l);
+  });
+  addAt(g,x,.25,z); g.rotation.y=rng()*Math.PI; return g;
+}
+
+function createTransistor(x,z){
+  const g=new THREE.Group(), h=1.2;
+  const body=mkMesh(new THREE.CylinderGeometry(.34,.34,h,20),{color:0x111111,roughness:.4},true);
+  g.add(body);
+  // flat face (TO-92 characteristic)
+  const flat=mkMesh(new THREE.PlaneGeometry(.62,h),{color:0x1a1a1a,roughness:.6});
+  flat.position.set(.32,0,0); flat.rotation.y=Math.PI/2; g.add(flat);
+  // label
+  const lbl=mkMesh(new THREE.PlaneGeometry(.44,.28),{color:0x223344});
+  lbl.position.set(.323,.1,0); lbl.rotation.y=Math.PI/2; g.add(lbl);
+  // 3 leads
+  [-.13, 0, .13].forEach(ox=>{
+    const l=mkMesh(new THREE.CylinderGeometry(.038,.038,.88,8),MATS.silver);
+    l.position.set(ox,-h/2-.44,0); g.add(l);
+  });
+  addAt(g,x,h/2,z); g.rotation.y=rng()*Math.PI*2; return g;
+}
+
+const LED_COLS=[0xff2200,0x00ff55,0x0077ff,0xffcc00,0xff00cc,0x00ffff,0xff6600,0x88ff00];
+function createLED(x,z,color){
+  if(!color) color=LED_COLS[Math.floor(rng()*LED_COLS.length)];
+  const g=new THREE.Group();
+  const dome=new THREE.Mesh(
+    new THREE.SphereGeometry(.32,16,16,0,Math.PI*2,0,Math.PI/2),
+    mkMat({color,roughness:.08,emissive:color,emissiveIntensity:1.5,transparent:true,opacity:.82})
+  );
+  dome.position.y=.5; g.add(dome);
+  const collar=mkMesh(new THREE.CylinderGeometry(.33,.33,.5,16),{color:0xdddddd,roughness:.3,metalness:.5});
+  collar.position.y=.25; g.add(collar);
+  [-.11, .11].forEach((ox,i)=>{
+    const lh=i===0?1.02:.8;
+    const l=mkMesh(new THREE.CylinderGeometry(.038,.038,lh,8),MATS.silver);
+    l.position.set(ox,-lh/2,0); g.add(l);
+  });
+  const glow=new THREE.PointLight(color,2.8,7);
+  glow.position.y=.82; g.add(glow);
+  addAt(g,x,0,z); return g;
+}
+
+function createDiode(x,z){
+  const g=new THREE.Group();
+  const body=mkMesh(new THREE.CylinderGeometry(.17,.17,.72,16),{color:0x2222aa,roughness:.3},true);
+  body.rotation.z=Math.PI/2; g.add(body);
+  const stripe=mkMesh(new THREE.CylinderGeometry(.175,.175,.09,16),{color:0xffffff,roughness:.5});
+  stripe.rotation.z=Math.PI/2; stripe.position.x=.27; g.add(stripe);
+  [-1,1].forEach(d=>{
+    const l=mkMesh(new THREE.CylinderGeometry(.032,.032,.48,8),MATS.silver);
+    l.rotation.z=Math.PI/2; l.position.x=d*.62; g.add(l);
+  });
+  addAt(g,x,.2,z); g.rotation.y=rng()*Math.PI; return g;
+}
+
+function createCrystal(x,z){
+  const g=new THREE.Group();
+  const b=mkMesh(new THREE.BoxGeometry(.46,.32,1.32),{color:0xaaaaaa,roughness:.1,metalness:.9},true);
+  g.add(b);
+  [-.5,.5].forEach(oz=>{
+    const l=mkMesh(new THREE.CylinderGeometry(.038,.038,.52,8),MATS.silver);
+    l.position.set(0,-.27,oz); g.add(l);
+  });
+  addAt(g,x,.16,z); g.rotation.y=rng()*Math.PI; return g;
+}
+
+function createInductor(x,z){
+  const g=new THREE.Group();
+  const core=mkMesh(new THREE.TorusGeometry(.42,.17,10,20),{color:0x442200,roughness:.7});
+  core.rotation.x=Math.PI/2; g.add(core);
+  for(let i=0;i<12;i++){
+    const a=(i/12)*Math.PI*2;
+    const w=new THREE.Mesh(new THREE.TorusGeometry(.42,.037,6,6,Math.PI*.27),
+      mkMat({color:0xc8960c,roughness:.2,metalness:.9}));
+    w.rotation.x=Math.PI/2; w.rotation.z=a; g.add(w);
+  }
+  addAt(g,x,.28,z); return g;
+}
+
+// ── CITY LAYOUT ────────────────────────────────────────────────────────────────
+
+// LED nodes at every intersection
+let nodeCount=0;
+nodes.forEach(n=>{
+  const color=LED_COLS[Math.floor(rng()*LED_COLS.length)];
+  createLED(n.x, n.z, color);
+  const plat=mkMesh(new THREE.CylinderGeometry(.88,.98,.1,12),{color:0x223300,roughness:.6});
+  plat.position.set(n.x,.05,n.z); scene.add(plat);
+  nodeCount++;
+});
+document.getElementById('nc').textContent=nodeCount;
+
+// Compute block centroids from quad patches
+const compFns=[
+  (x,z)=>createResistor(x,z),
+  (x,z)=>createCapacitor(x,z),
+  (x,z)=>createTransistor(x,z),
+  (x,z)=>createDiode(x,z),
+  (x,z)=>createCrystal(x,z),
+  (x,z)=>createInductor(x,z),
+];
+
+for (let r=0; r<ROWS-1; r++){
+  for (let c=0; c<COLS-1; c++){
+    const n0=nodes[r*COLS+c], n1=nodes[r*COLS+c+1],
+          n2=nodes[(r+1)*COLS+c], n3=nodes[(r+1)*COLS+c+1];
+    const cx=(n0.x+n1.x+n2.x+n3.x)/4;
+    const cz=(n0.z+n1.z+n2.z+n3.z)/4;
+    // rough inscribed radius
+    const rMin = Math.min(
+      Math.sqrt((n1.x-n0.x)**2+(n1.z-n0.z)**2),
+      Math.sqrt((n2.x-n0.x)**2+(n2.z-n0.z)**2)
+    ) * 0.36;
+
+    // anchor component
+    if (rng()<.28) createBGA(cx,cz);
+    else createICChip(cx,cz, .8+rng()*.55);
+
+    // scattered fill
+    const count = 4+Math.floor(rng()*7);
+    for(let i=0;i<count;i++){
+      const ang=(i/count)*Math.PI*2+(rng()-.5)*.9;
+      const dist=(rng()*.5+.38)*rMin;
+      const px=cx+Math.cos(ang)*dist;
+      const pz=cz+Math.sin(ang)*dist;
+      compFns[Math.floor(rng()*compFns.length)](px,pz);
+    }
+    // extra small passives
+    for(let i=0;i<4;i++){
+      const px=cx+(rng()-.5)*rMin*1.6;
+      const pz=cz+(rng()-.5)*rMin*1.6;
+      rng()<.5 ? createResistor(px,pz) : createDiode(px,pz);
+    }
+  }
+}
+
+// ── STREET LIGHTS ─────────────────────────────────────────────────────────────
+allEdges.forEach(key=>{
+  const [ai,bi]=key.split('-').map(Number);
+  const a=nodes[ai], b=nodes[bi];
+  const dx=b.x-a.x, dz=b.z-a.z, len=Math.sqrt(dx*dx+dz*dz);
+  const steps=Math.max(1,Math.floor(len/9));
+  for(let s=1;s<steps;s++){
+    const t=s/steps, px=a.x+dx*t, pz=a.z+dz*t;
+    const nx=-dz/len*1.75, nz=dx/len*1.75;
+    [1,-1].forEach(side=>{
+      const sx=px+nx*side, sz=pz+nz*side;
+      const pole=mkMesh(new THREE.CylinderGeometry(.055,.075,2.3,8),{color:0x445533,roughness:.6});
+      pole.position.set(sx,1.15,sz); scene.add(pole);
+      const bulb=mkMesh(new THREE.SphereGeometry(.14,8,8),{color:0xffffaa,emissive:0xffffaa,emissiveIntensity:2.5});
+      bulb.position.set(sx,2.48,sz); scene.add(bulb);
+      const sl=new THREE.PointLight(0xffeecc,.75,7.5);
+      sl.position.set(sx,2.48,sz); scene.add(sl);
+    });
+  }
+});
+
+// ── FLOATING PARTICLES ────────────────────────────────────────────────────────
+const PC=380, pPos=new Float32Array(PC*3);
+for(let i=0;i<PC;i++){
+  pPos[i*3]=(rng()-.5)*WORLD*.9;
+  pPos[i*3+1]=rng()*9+.4;
+  pPos[i*3+2]=(rng()-.5)*WORLD*.9;
+}
+const pGeo=new THREE.BufferGeometry();
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const particles=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x44ff88,size:.07,transparent:true,opacity:.52}));
+scene.add(particles);
+
+// ── RENDER LOOP ───────────────────────────────────────────────────────────────
+let auto=true, t=0;
+controls.addEventListener('start',()=>{ auto=false; });
+
+(function animate(){
+  requestAnimationFrame(animate);
+  t+=.0022;
+  if(auto){
+    camera.position.x=Math.sin(t*.32)*58;
+    camera.position.z=Math.cos(t*.32)*58;
+    camera.position.y=26+Math.sin(t*.17)*8;
+    camera.lookAt(0,0,0);
+  }
+  const pa=particles.geometry.attributes.position;
+  for(let i=0;i<PC;i++){
+    pa.array[i*3+1]+=.007;
+    if(pa.array[i*3+1]>9.8) pa.array[i*3+1]=.3;
+  }
+  pa.needsUpdate=true;
+  controls.update();
+  renderer.render(scene,camera);
+})();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
 </script>
 </body>
 </html>

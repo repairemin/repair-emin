@@ -2,167 +2,805 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>3D Electronic City - Ultra Clarity</title>
+    <title>Electronic City 3D</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87ceeb; } /* Nền trời xanh nhạt như ảnh */
-        .ui {
-            position: absolute; top: 20px; left: 20px;
-            color: #fff; font-family: sans-serif;
-            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
-            pointer-events: none;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #0a0e1a; font-family: 'Courier New', monospace; }
+
+        #canvas-container { width: 100vw; height: 100vh; }
+
+        .ui-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
         }
+
+        .top-bar {
+            position: absolute; top: 0; left: 0; right: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+            padding: 16px 24px;
+            display: flex; align-items: center; gap: 16px;
+        }
+
+        .logo {
+            font-size: 11px; letter-spacing: 4px; color: #00ff88;
+            text-transform: uppercase; font-weight: bold;
+        }
+        .logo span { color: #ff6600; }
+
+        .status-dots { display: flex; gap: 8px; align-items: center; }
+        .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .dot.green { background: #00ff88; }
+        .dot.yellow { background: #ffcc00; animation-delay: 0.5s; }
+        .dot.red { background: #ff4444; animation-delay: 1s; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .info-panel {
+            position: absolute; bottom: 24px; left: 24px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 4px; padding: 14px 18px;
+            font-size: 10px; color: #888;
+            line-height: 1.8; letter-spacing: 1px;
+        }
+        .info-panel .val { color: #00ff88; }
+        .info-panel .title { color: #ff6600; font-size: 9px; letter-spacing: 3px; margin-bottom: 6px; }
+
+        .legend {
+            position: absolute; bottom: 24px; right: 24px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 4px; padding: 14px 18px;
+            font-size: 9px; letter-spacing: 1px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: #888; }
+        .legend-color { width: 10px; height: 10px; border-radius: 2px; }
+
+        .scan-line {
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0,255,136,0.3), transparent);
+            animation: scan 4s linear infinite;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        .corner-tl, .corner-tr, .corner-bl, .corner-br {
+            position: absolute; width: 20px; height: 20px;
+            border-color: rgba(0, 255, 136, 0.5);
+            border-style: solid;
+        }
+        .corner-tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+        .corner-tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+        .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+        .corner-br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
     </style>
 </head>
 <body>
-    <div class="ui">
-        <b>ELECTRONIC CITY V1.0</b><br>
-        Status: High Visibility Mode
+<div id="canvas-container"></div>
+
+<div class="ui-overlay">
+    <div class="scan-line"></div>
+    <div class="corner-tl"></div>
+    <div class="corner-tr"></div>
+    <div class="corner-bl"></div>
+    <div class="corner-br"></div>
+
+    <div class="top-bar">
+        <div class="logo">Electronic <span>City</span> V2.0</div>
+        <div class="status-dots">
+            <div class="dot green"></div>
+            <div class="dot yellow"></div>
+            <div class="dot red"></div>
+        </div>
     </div>
 
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
+    <div class="info-panel">
+        <div class="title">// SYSTEM STATUS</div>
+        <div>VOLTAGE &nbsp;&nbsp;<span class="val">5.0V DC</span></div>
+        <div>FREQ &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">100 MHz</span></div>
+        <div>TEMP &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">42°C</span></div>
+        <div>NODES &nbsp;&nbsp;&nbsp;<span class="val" id="node-count">0</span></div>
+    </div>
 
-    <script type="module">
-        import * as THREE from 'three';
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background:#1a3a6a"></div>IC CHIP</div>
+        <div class="legend-item"><div class="legend-color" style="background:#2255bb"></div>CAPACITOR</div>
+        <div class="legend-item"><div class="legend-color" style="background:#555"></div>RESISTOR</div>
+        <div class="legend-item"><div class="legend-color" style="background:#884400"></div>TRANSISTOR</div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4400"></div>LED</div>
+    </div>
+</div>
 
-        // --- KHỞI TẠO ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xa3c2d1); // Màu trời nhạt
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.body.appendChild(renderer.domElement);
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- ÁNH SÁNG (Cực kỳ quan trọng để nhìn rõ như ảnh) ---
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2.5);
-        scene.add(hemiLight);
+// ===== SETUP =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050810);
+scene.fog = new THREE.FogExp2(0x050810, 0.012);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-        dirLight.position.set(10, 20, 10);
-        scene.add(dirLight);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
+camera.position.set(0, 28, 38);
+camera.lookAt(0, 0, 0);
 
-        // --- MẶT NỀN PCB (Xanh lá rực rỡ với đường mạch) ---
-        const pcbGroup = new THREE.Group();
-        const pcbMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.4 });
-        const pcbBase = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), pcbMat);
-        pcbBase.rotation.x = -Math.PI / 2;
-        pcbGroup.add(pcbBase);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        // Vẽ các đường mạch vàng (Traces) rõ ràng
-        const traceMat = new THREE.MeshStandardMaterial({ color: 0x88cc44, metalness: 0.5 });
-        for(let i=0; i<80; i++) {
-            const w = Math.random() > 0.5 ? 0.05 : 0.15;
-            const l = Math.random() * 10 + 2;
-            const trace = new THREE.Mesh(new THREE.PlaneGeometry(w, l), traceMat);
-            trace.rotation.x = -Math.PI / 2;
-            trace.position.set((Math.random()-0.5)*50, 0.01, (Math.random()-0.5)*50);
-            if(Math.random() > 0.5) trace.rotation.z = Math.PI / 2;
-            pcbGroup.add(trace);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.minDistance = 10;
+controls.maxDistance = 120;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.target.set(0, 0, 0);
+
+// ===== LIGHTING =====
+const ambientLight = new THREE.AmbientLight(0x111827, 3);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+dirLight.position.set(30, 50, 20);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 200;
+dirLight.shadow.camera.left = -80;
+dirLight.shadow.camera.right = 80;
+dirLight.shadow.camera.top = 80;
+dirLight.shadow.camera.bottom = -80;
+scene.add(dirLight);
+
+// Subtle fill light from below
+const fillLight = new THREE.HemisphereLight(0x0a1228, 0x1a2a10, 1.2);
+scene.add(fillLight);
+
+// ===== MATERIALS =====
+const pcbMat = new THREE.MeshStandardMaterial({ color: 0x0d2b0d, roughness: 0.6, metalness: 0.1 });
+const pcbLineMat = new THREE.MeshStandardMaterial({ color: 0x1a6617, roughness: 0.4, metalness: 0.3, emissive: 0x0a3308, emissiveIntensity: 0.3 });
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xc8960c, roughness: 0.2, metalness: 0.9 });
+const silverMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.15, metalness: 0.95 });
+const roadMat = new THREE.MeshStandardMaterial({ color: 0x1a2200, roughness: 0.9 });
+const roadLineMat = new THREE.MeshStandardMaterial({ color: 0xaaff44, roughness: 0.5, emissive: 0x44aa00, emissiveIntensity: 0.6 });
+
+// ===== PCB BASE =====
+const pcbSize = 80;
+const pcbThick = 0.6;
+const pcbBase = new THREE.Mesh(
+    new THREE.BoxGeometry(pcbSize, pcbThick, pcbSize),
+    pcbMat
+);
+pcbBase.receiveShadow = true;
+pcbBase.position.y = -pcbThick / 2;
+scene.add(pcbBase);
+
+// ===== CITY GRID LAYOUT =====
+// Road system: main avenues + intersections
+const BLOCK_SIZE = 14;    // kích thước 1 ô phố
+const ROAD_WIDTH = 2.5;   // độ rộng đường
+const GRID_COUNT = 4;     // 4x4 blocks
+const HALF = (GRID_COUNT * BLOCK_SIZE) / 2;
+
+// Vẽ đường ngang dọc
+function createRoadSegment(x1, z1, x2, z2) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const length = Math.sqrt(dx*dx + dz*dz);
+    const angle = Math.atan2(dz, dx);
+    const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(length, ROAD_WIDTH),
+        roadMat
+    );
+    road.rotation.x = -Math.PI / 2;
+    road.rotation.z = -angle;
+    road.position.set((x1+x2)/2, 0.02, (z1+z2)/2);
+    road.receiveShadow = true;
+    scene.add(road);
+}
+
+// Tạo lưới đường
+for (let i = 0; i <= GRID_COUNT; i++) {
+    const pos = -HALF + i * BLOCK_SIZE;
+    // đường dọc
+    createRoadSegment(pos, -HALF, pos, HALF);
+    // đường ngang
+    createRoadSegment(-HALF, pos, HALF, pos);
+}
+
+// Vạch kẻ đường (copper traces)
+function createTrace(x1, z1, x2, z2, width = 0.12) {
+    const dx = x2-x1, dz = z2-z1;
+    const len = Math.sqrt(dx*dx+dz*dz);
+    const tr = new THREE.Mesh(new THREE.PlaneGeometry(len, width), pcbLineMat);
+    tr.rotation.x = -Math.PI/2;
+    tr.rotation.z = -Math.atan2(dz, dx);
+    tr.position.set((x1+x2)/2, 0.04, (z1+z2)/2);
+    scene.add(tr);
+}
+
+// PCB trace dọc theo đường phố
+for (let i = 0; i <= GRID_COUNT; i++) {
+    const pos = -HALF + i * BLOCK_SIZE;
+    for (let d = -0.6; d <= 0.6; d += 0.3) {
+        createTrace(pos + d, -HALF, pos + d, HALF);
+        createTrace(-HALF, pos + d, HALF, pos + d);
+    }
+}
+
+// Thêm trace chéo ngẫu nhiên trong block
+for (let ix = 0; ix < GRID_COUNT; ix++) {
+    for (let iz = 0; iz < GRID_COUNT; iz++) {
+        const bx = -HALF + ix * BLOCK_SIZE + BLOCK_SIZE/2;
+        const bz = -HALF + iz * BLOCK_SIZE + BLOCK_SIZE/2;
+        // vài trace ngang dọc trong block
+        for (let t = 0; t < 5; t++) {
+            const rx = bx + (Math.random()-0.5) * (BLOCK_SIZE-3);
+            const rz = bz + (Math.random()-0.5) * (BLOCK_SIZE-3);
+            const len = Math.random()*3+1;
+            if (Math.random() > 0.5)
+                createTrace(rx-len/2, rz, rx+len/2, rz);
+            else
+                createTrace(rx, rz-len/2, rx, rz+len/2);
         }
-        scene.add(pcbGroup);
+    }
+}
 
-        // --- HÀM TẠO LINH KIỆN CHI TIẾT ---
-        function createCapacitor(x, z) {
-            const h = Math.random() * 1.5 + 1;
-            const cap = new THREE.Group();
-            const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.5, 0.5, h, 32),
-                new THREE.MeshStandardMaterial({ color: 0x33aaff }) // Xanh tụ điện rực rỡ
+// Solder pads (via) tại giao điểm trace
+for (let ix = 0; ix < GRID_COUNT; ix++) {
+    for (let iz = 0; iz < GRID_COUNT; iz++) {
+        const bx = -HALF + ix * BLOCK_SIZE + BLOCK_SIZE/2;
+        const bz = -HALF + iz * BLOCK_SIZE + BLOCK_SIZE/2;
+        for (let t = 0; t < 8; t++) {
+            const pad = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8),
+                goldMat
             );
-            const top = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.5, 0.5, 0.05, 32),
-                new THREE.MeshStandardMaterial({ color: 0xaaaaaa })
-            );
-            top.position.y = h/2;
-            cap.add(body, top);
-            cap.position.set(x, h/2, z);
-            scene.add(cap);
+            pad.position.set(bx+(Math.random()-0.5)*10, 0.03, bz+(Math.random()-0.5)*10);
+            scene.add(pad);
         }
+    }
+}
 
-        function createChip(x, z) {
-            const chip = new THREE.Mesh(
-                new THREE.BoxGeometry(2, 0.4, 2),
-                new THREE.MeshStandardMaterial({ color: 0x333333 })
+// ===== COMPONENT BUILDERS =====
+
+// --- IC CHIP (QFP package) ---
+function createICChip(x, z, scale = 1) {
+    const g = new THREE.Group();
+    const w = 3.5*scale, h = 0.5*scale, d = 3.5*scale;
+
+    // Body
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.3, metalness: 0.1 })
+    );
+    body.castShadow = true;
+    g.add(body);
+
+    // Top marking (silkscreen)
+    const mark = new THREE.Mesh(
+        new THREE.PlaneGeometry(w*0.7, d*0.7),
+        new THREE.MeshStandardMaterial({ color: 0x1a2a44, roughness: 0.5 })
+    );
+    mark.rotation.x = -Math.PI/2;
+    mark.position.y = h/2 + 0.01;
+    g.add(mark);
+
+    // Pin 1 dot
+    const dot = new THREE.Mesh(
+        new THREE.CircleGeometry(0.12*scale, 8),
+        new THREE.MeshStandardMaterial({ color: 0x88aadd })
+    );
+    dot.rotation.x = -Math.PI/2;
+    dot.position.set(-w*0.28, h/2+0.01, -d*0.28);
+    g.add(dot);
+
+    // Pins on all 4 sides
+    const pinMat = new THREE.MeshStandardMaterial({ color: 0xc8960c, roughness: 0.1, metalness: 1.0 });
+    const pinCount = Math.floor(5 * scale);
+    const pinSpacing = (d * 0.7) / (pinCount - 1);
+    const sides = [
+        { axis: 'x', dir: 1,  baseZ: true  },
+        { axis: 'x', dir: -1, baseZ: true  },
+        { axis: 'z', dir: 1,  baseZ: false },
+        { axis: 'z', dir: -1, baseZ: false },
+    ];
+    sides.forEach(({ axis, dir, baseZ }) => {
+        for (let i = 0; i < pinCount; i++) {
+            const offset = -d*0.35 + i * pinSpacing;
+            const pin = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08*scale, 0.3*scale, 0.25*scale),
+                pinMat
             );
-            chip.position.set(x, 0.2, z);
-            // Thêm các chân chip bạc
-            const pinGeo = new THREE.BoxGeometry(0.1, 0.3, 0.1);
-            const pinMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8 });
-            for(let i=-0.8; i<=0.8; i+=0.4) {
-                const p1 = new THREE.Mesh(pinGeo, pinMat); p1.position.set(1.05, -0.1, i);
-                const p2 = new THREE.Mesh(pinGeo, pinMat); p2.position.set(-1.05, -0.1, i);
-                chip.add(p1, p2);
+            if (axis === 'x') {
+                pin.position.set(dir*(w/2 + 0.18*scale), -0.05*scale, offset);
+                pin.rotation.z = dir * 0.2;
+            } else {
+                pin.rotation.y = Math.PI/2;
+                pin.position.set(offset, -0.05*scale, dir*(d/2 + 0.18*scale));
+                pin.rotation.z = 0.2;
             }
-            scene.add(chip);
+            g.add(pin);
+        }
+    });
+
+    g.position.set(x, h/2, z);
+    scene.add(g);
+    return g;
+}
+
+// --- ELECTROLYTIC CAPACITOR ---
+function createCapacitor(x, z, colorHex = 0x1133cc) {
+    const g = new THREE.Group();
+    const r = 0.55, h = 1.8 + Math.random() * 1.0;
+
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(r, r, h, 24),
+        new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.3, metalness: 0.1 })
+    );
+    body.castShadow = true;
+    g.add(body);
+
+    // Top aluminum cap with cross mark
+    const topCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(r, r, 0.08, 24),
+        new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.2, metalness: 0.9 })
+    );
+    topCap.position.y = h/2 + 0.04;
+    g.add(topCap);
+
+    // Cross vent mark on top
+    [0, Math.PI/2].forEach(rot => {
+        const vent = new THREE.Mesh(
+            new THREE.BoxGeometry(r*1.5, 0.02, 0.06),
+            new THREE.MeshStandardMaterial({ color: 0x666666 })
+        );
+        vent.rotation.y = rot;
+        vent.position.y = h/2 + 0.09;
+        g.add(vent);
+    });
+
+    // Polarity stripe
+    const stripe = new THREE.Mesh(
+        new THREE.CylinderGeometry(r+0.01, r+0.01, h*0.6, 24, 1, true,
+            Math.PI * 1.7, Math.PI * 0.6),
+        new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.5, side: THREE.FrontSide })
+    );
+    stripe.position.y = 0;
+    g.add(stripe);
+
+    // Leads
+    [-0.2, 0.2].forEach((ox, i) => {
+        const lead = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.04, 0.6, 8),
+            silverMat
+        );
+        lead.position.set(ox, -h/2 - 0.3, 0);
+        g.add(lead);
+    });
+
+    g.position.set(x, h/2, z);
+    scene.add(g);
+    return g;
+}
+
+// --- RESISTOR (axial) ---
+function createResistor(x, z) {
+    const g = new THREE.Group();
+    const bands = [
+        [0xff0000, 0xff8800, 0xffff00, 0x884400][Math.floor(Math.random()*4)],
+        [0x0000ff, 0x00aa00, 0x888888][Math.floor(Math.random()*3)],
+        [0xffaa00, 0xff0000][Math.floor(Math.random()*2)]
+    ];
+
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, 1.0, 16),
+        new THREE.MeshStandardMaterial({ color: 0xd4aa77, roughness: 0.8 })
+    );
+    body.rotation.z = Math.PI/2;
+    body.castShadow = true;
+    g.add(body);
+
+    // Color bands
+    bands.forEach((col, i) => {
+        const band = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.23, 0.23, 0.1, 16),
+            new THREE.MeshStandardMaterial({ color: col, roughness: 0.6 })
+        );
+        band.rotation.z = Math.PI/2;
+        band.position.x = -0.3 + i * 0.25;
+        g.add(band);
+    });
+
+    // Gold tolerance band
+    const goldBand = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.23, 0.23, 0.08, 16),
+        goldMat
+    );
+    goldBand.rotation.z = Math.PI/2;
+    goldBand.position.x = 0.38;
+    g.add(goldBand);
+
+    // Leads
+    [-1, 1].forEach(dir => {
+        const lead = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.035, 0.035, 0.7, 8),
+            silverMat
+        );
+        lead.rotation.z = Math.PI/2;
+        lead.position.x = dir * 0.85;
+        g.add(lead);
+    });
+
+    g.position.set(x, 0.28, z);
+    g.rotation.y = Math.random() * Math.PI;
+    scene.add(g);
+    return g;
+}
+
+// --- TRANSISTOR (TO-92 package) ---
+function createTransistor(x, z) {
+    const g = new THREE.Group();
+    const h = 1.2;
+
+    // Body (flat side facing front)
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, h, 20),
+        new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 })
+    );
+    body.castShadow = true;
+    g.add(body);
+
+    // Flat face on body
+    const flat = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.62, h),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 })
+    );
+    flat.position.set(0.33, 0, 0);
+    flat.rotation.y = Math.PI/2;
+    g.add(flat);
+
+    // Part number on flat
+    const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.45, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0x333355 })
+    );
+    label.position.set(0.335, 0.1, 0);
+    label.rotation.y = Math.PI/2;
+    g.add(label);
+
+    // 3 leads: B, C, E
+    const leadPositions = [[-0.15, 0], [0, 0], [0.15, 0]];
+    leadPositions.forEach(([ox, oz]) => {
+        const lead = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8),
+            silverMat
+        );
+        lead.position.set(ox, -h/2 - 0.5, oz);
+        g.add(lead);
+    });
+
+    g.position.set(x, h/2, z);
+    g.rotation.y = Math.random() * Math.PI * 2;
+    scene.add(g);
+    return g;
+}
+
+// --- LED (5mm round) ---
+function createLED(x, z, color = 0xff2200) {
+    const g = new THREE.Group();
+    const emissiveCol = color;
+
+    // Dome
+    const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 16, 16, 0, Math.PI*2, 0, Math.PI/2),
+        new THREE.MeshStandardMaterial({
+            color: color, roughness: 0.1, metalness: 0,
+            emissive: color, emissiveIntensity: 1.2,
+            transparent: true, opacity: 0.85
+        })
+    );
+    dome.position.y = 0.55;
+    g.add(dome);
+
+    // Flat base collar
+    const collar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36, 0.36, 0.55, 16),
+        new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.3, metalness: 0.5 })
+    );
+    collar.position.y = 0.275;
+    g.add(collar);
+
+    // Leads
+    [[-0.12, 1.1], [0.12, 0.85]].forEach(([ox, lh]) => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,lh,8), silverMat);
+        lead.position.set(ox, -(lh/2), 0);
+        g.add(lead);
+    });
+
+    // Point light glow
+    const glow = new THREE.PointLight(color, 2, 5);
+    glow.position.y = 0.9;
+    g.add(glow);
+
+    g.position.set(x, 0, z);
+    scene.add(g);
+    return g;
+}
+
+// --- DIODE ---
+function createDiode(x, z) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.18, 0.8, 16),
+        new THREE.MeshStandardMaterial({ color: 0x2222aa, roughness: 0.3 })
+    );
+    body.rotation.z = Math.PI/2;
+    body.castShadow = true;
+    g.add(body);
+
+    // Cathode stripe
+    const stripe = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.19, 0.19, 0.1, 16),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 })
+    );
+    stripe.rotation.z = Math.PI/2;
+    stripe.position.x = 0.3;
+    g.add(stripe);
+
+    // Leads
+    [-1,1].forEach(dir => {
+        const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.55,8), silverMat);
+        lead.rotation.z = Math.PI/2;
+        lead.position.x = dir*0.68;
+        g.add(lead);
+    });
+    g.position.set(x, 0.22, z);
+    g.rotation.y = Math.random()*Math.PI;
+    scene.add(g);
+    return g;
+}
+
+// --- CRYSTAL OSCILLATOR ---
+function createCrystal(x, z) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.35, 1.4),
+        new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.1, metalness: 0.9 })
+    );
+    body.castShadow = true;
+    g.add(body);
+    [-0.55, 0.55].forEach(oz => {
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.6,8), silverMat);
+        pin.position.set(0, -0.3, oz);
+        g.add(pin);
+    });
+    g.position.set(x, 0.175, z);
+    g.rotation.y = Math.random()*Math.PI;
+    scene.add(g);
+}
+
+// --- BGA CHIP (large IC with solder balls) ---
+function createBGA(x, z) {
+    const g = new THREE.Group();
+    const w = 5.5, h = 0.5, d = 5.5;
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: 0x0d1020, roughness: 0.2, metalness: 0.1 })
+    );
+    body.castShadow = true;
+    g.add(body);
+
+    // Die outline
+    const die = new THREE.Mesh(
+        new THREE.BoxGeometry(w*0.7, h+0.05, d*0.7),
+        new THREE.MeshStandardMaterial({ color: 0x1a2a55, roughness: 0.4 })
+    );
+    die.position.y = 0.01;
+    g.add(die);
+
+    // Solder balls grid
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.1, metalness: 0.95 });
+    for (let bi = -2; bi <= 2; bi++) {
+        for (let bj = -2; bj <= 2; bj++) {
+            const ball = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), ballMat);
+            ball.position.set(bi*0.9, -h/2-0.1, bj*0.9);
+            g.add(ball);
+        }
+    }
+
+    // Labels
+    const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(w*0.6, d*0.25),
+        new THREE.MeshStandardMaterial({ color: 0x334488, roughness: 0.5 })
+    );
+    label.rotation.x = -Math.PI/2;
+    label.position.y = h/2+0.01;
+    g.add(label);
+
+    g.position.set(x, h/2, z);
+    scene.add(g);
+}
+
+// --- INDUCTOR (toroid) ---
+function createInductor(x, z) {
+    const g = new THREE.Group();
+    const core = new THREE.Mesh(
+        new THREE.TorusGeometry(0.45, 0.18, 10, 20),
+        new THREE.MeshStandardMaterial({ color: 0x442200, roughness: 0.6 })
+    );
+    core.rotation.x = Math.PI/2;
+    g.add(core);
+    // Wire windings
+    for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const winding = new THREE.Mesh(
+            new THREE.TorusGeometry(0.45, 0.04, 6, 6,  Math.PI * 0.3),
+            new THREE.MeshStandardMaterial({ color: 0xc8960c, roughness: 0.2, metalness: 0.9 })
+        );
+        winding.rotation.x = Math.PI/2;
+        winding.rotation.z = angle;
+        g.add(winding);
+    }
+    g.position.set(x, 0.3, z);
+    scene.add(g);
+}
+
+// ===== INTERSECTION LED CLUSTERS =====
+const ledColors = [0xff2200, 0x00ff44, 0x0066ff, 0xffcc00, 0xff00ff, 0x00ffff];
+let nodeCount = 0;
+
+for (let ix = 0; ix <= GRID_COUNT; ix++) {
+    for (let iz = 0; iz <= GRID_COUNT; iz++) {
+        const x = -HALF + ix * BLOCK_SIZE;
+        const z = -HALF + iz * BLOCK_SIZE;
+        // LED cluster at each intersection
+        const color = ledColors[Math.floor(Math.random() * ledColors.length)];
+        createLED(x, z, color);
+        // Small platform for LED cluster
+        const plat = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.0, 1.1, 0.12, 12),
+            new THREE.MeshStandardMaterial({ color: 0x334400, roughness: 0.5 })
+        );
+        plat.position.set(x, 0.06, z);
+        scene.add(plat);
+        nodeCount++;
+    }
+}
+
+document.getElementById('node-count').textContent = nodeCount;
+
+// ===== POPULATE BLOCKS WITH COMPONENTS =====
+const componentTypes = ['ic', 'cap', 'res', 'trans', 'bga', 'crystal', 'diode', 'inductor'];
+
+for (let ix = 0; ix < GRID_COUNT; ix++) {
+    for (let iz = 0; iz < GRID_COUNT; iz++) {
+        const bx = -HALF + ix * BLOCK_SIZE + BLOCK_SIZE/2;
+        const bz = -HALF + iz * BLOCK_SIZE + BLOCK_SIZE/2;
+        const inner = BLOCK_SIZE/2 - 2.5;
+
+        // Main component at block center (large)
+        const mainType = componentTypes[Math.floor(Math.random() * 3)]; // ic, cap, bga
+        if (mainType === 'bga' || (ix + iz) % 2 === 0) {
+            if ((ix + iz) % 3 === 0) createBGA(bx, bz);
+            else createICChip(bx, bz, 1.3);
+        } else {
+            createICChip(bx, bz, 1.0);
         }
 
-        function createResistor(x, z) {
-            const res = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.8, 16), new THREE.MeshStandardMaterial({color: 0xcccccc}));
-            body.rotation.z = Math.PI/2;
-            // Vạch màu điện trở
-            const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.1, 16), new THREE.MeshStandardMaterial({color: 0xff0000}));
-            ring.position.x = 0.2; ring.rotation.z = Math.PI/2;
-            body.add(ring);
-            res.add(body);
-            res.position.set(x, 0.2, z);
-            scene.add(res);
+        // Surrounding components
+        const count = 5 + Math.floor(Math.random() * 6);
+        for (let c = 0; c < count; c++) {
+            const rx = bx + (Math.random()-0.5) * inner * 2;
+            const rz = bz + (Math.random()-0.5) * inner * 2;
+            const type = componentTypes[Math.floor(Math.random() * componentTypes.length)];
+            switch(type) {
+                case 'cap':
+                    createCapacitor(rx, rz, ledColors[Math.floor(Math.random()*ledColors.length)]);
+                    break;
+                case 'res': createResistor(rx, rz); break;
+                case 'trans': createTransistor(rx, rz); break;
+                case 'crystal': createCrystal(rx, rz); break;
+                case 'diode': createDiode(rx, rz); break;
+                case 'inductor': createInductor(rx, rz); break;
+                default: createICChip(rx, rz, 0.7);
+            }
         }
+    }
+}
 
-        // Tạo cây xanh (Low poly trees) như trong ảnh
-        function createTree(x, z) {
-            const tree = new THREE.Group();
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5), new THREE.MeshStandardMaterial({color: 0x553311}));
-            const leaves = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshStandardMaterial({color: 0x44aa22}));
-            leaves.position.y = 0.5;
-            tree.add(trunk, leaves);
-            tree.position.set(x, 0.25, z);
-            scene.add(tree);
-        }
-
-        // Rải linh kiện
-        for(let i=0; i<150; i++) {
-            const x = (Math.random()-0.5)*40;
-            const z = (Math.random()-0.5)*40;
-            const r = Math.random();
-            if(r > 0.7) createCapacitor(x, z);
-            else if(r > 0.4) createChip(x, z);
-            else if(r > 0.2) createResistor(x, z);
-            else createTree(x, z);
-        }
-
-        // --- ANIMATION (Góc nhìn thứ nhất bay mượt) ---
-        let time = 0;
-        function animate() {
-            requestAnimationFrame(animate);
-            time += 0.003;
-
-            // Camera bay theo đường uốn lượn nhẹ nhàng
-            camera.position.x = Math.sin(time) * 15;
-            camera.position.z = Math.cos(time * 0.7) * 15;
-            camera.position.y = 4 + Math.sin(time * 0.5) * 1.5;
-
-            // Luôn nhìn về phía trước
-            const target = new THREE.Vector3(
-                Math.sin(time + 0.5) * 10,
-                0,
-                Math.cos((time + 0.5) * 0.7) * 10
+// ===== STREET LIGHTS (glowing poles) =====
+for (let ix = 0; ix < GRID_COUNT; ix++) {
+    for (let iz = 0; iz <= GRID_COUNT; iz++) {
+        [[ix, iz], [ix+0.5, iz]].forEach(([bxi, bzi]) => {
+            const sx = -HALF + bxi * BLOCK_SIZE + BLOCK_SIZE/2;
+            const sz = -HALF + bzi * BLOCK_SIZE - ROAD_WIDTH;
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.06, 0.08, 2.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0x556644, roughness: 0.5 })
             );
-            camera.lookAt(target);
-
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            pole.position.set(sx, 1.25, sz);
+            scene.add(pole);
+            const bulb = new THREE.Mesh(
+                new THREE.SphereGeometry(0.18, 8, 8),
+                new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffffaa, emissiveIntensity: 2 })
+            );
+            bulb.position.set(sx, 2.6, sz);
+            scene.add(bulb);
+            const streetLight = new THREE.PointLight(0xffffee, 1.0, 8);
+            streetLight.position.set(sx, 2.6, sz);
+            scene.add(streetLight);
         });
+    }
+}
 
-        animate();
-    </script>
+// ===== ATMOSPHERE: floating particles =====
+const particleCount = 300;
+const pGeo = new THREE.BufferGeometry();
+const pPositions = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+    pPositions[i*3]   = (Math.random()-0.5)*pcbSize;
+    pPositions[i*3+1] = Math.random()*8 + 0.5;
+    pPositions[i*3+2] = (Math.random()-0.5)*pcbSize;
+}
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+const pMat = new THREE.PointsMaterial({ color: 0x44ff88, size: 0.08, transparent: true, opacity: 0.6 });
+const particles = new THREE.Points(pGeo, pMat);
+scene.add(particles);
+
+// ===== ANIMATE =====
+let autoOrbit = true;
+let t = 0;
+
+controls.addEventListener('start', () => { autoOrbit = false; });
+
+function animate() {
+    requestAnimationFrame(animate);
+    t += 0.003;
+
+    if (autoOrbit) {
+        camera.position.x = Math.sin(t * 0.4) * 45;
+        camera.position.z = Math.cos(t * 0.4) * 45;
+        camera.position.y = 22 + Math.sin(t * 0.2) * 6;
+        camera.lookAt(0, 0, 0);
+    }
+
+    // Animate particles (drift upward slowly)
+    const pos = particles.geometry.attributes.position;
+    for (let i = 0; i < particleCount; i++) {
+        pos.array[i*3+1] += 0.01;
+        if (pos.array[i*3+1] > 9) pos.array[i*3+1] = 0.3;
+    }
+    pos.needsUpdate = true;
+
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+
+animate();
+</script>
 </body>
 </html>

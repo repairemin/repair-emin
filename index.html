@@ -2,168 +2,148 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bright Hardware City - Sunlight Edition</title>
+    <title>Eco-Tech City: PCB Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #e0f7fa; font-family: 'Segoe UI', sans-serif; }
-        #ui {
-            position: absolute; top: 30px; left: 30px; color: #006064;
-            pointer-events: none; z-index: 10;
-        }
+        body { margin: 0; overflow: hidden; background-color: #000; }
         canvas { display: block; }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            text-shadow: 0 0 5px #00ff00;
+        }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h1 style="margin:0; font-size: 2.5rem; font-weight: 900;">ECO-TECH CITY</h1>
-        <p style="font-size: 1rem; font-weight: 600;">Sáng tạo từ những đường mạch tinh khôi</p>
+        <h1>ECO-TECH CITY v2.0</h1>
+        <p>> INITIALIZING PCB LAYOUT...</p>
+        <p>> LOADING COMPONENTS: RESISTORS, VIAS, TEST POINTS...</p>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-    <script>
-        let scene, camera, renderer, cityGroup, clock;
-
-        function init() {
-            scene = new THREE.Scene();
-            // Màu nền xanh nhạt như bầu trời buổi sáng
-            scene.background = new THREE.Color(0xd0ebff);
-            scene.fog = new THREE.Fog(0xd0ebff, 10, 60);
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(20, 15, 20);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.body.appendChild(renderer.domElement);
-
-            cityGroup = new THREE.Group();
-            scene.add(cityGroup);
-            clock = new THREE.Clock();
-
-            // --- ÁNH SÁNG MẶT TRỜI (SUNLIGHT) ---
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
-            scene.add(ambientLight);
-
-            const sunLight = new THREE.DirectionalLight(0xfff5d7, 1.2);
-            sunLight.position.set(50, 100, 50);
-            sunLight.castShadow = true;
-            scene.add(sunLight);
-
-            // Nền mạch in (Board trắng bạc)
-            const boardGeo = new THREE.PlaneGeometry(100, 100);
-            const boardMat = new THREE.MeshPhongMaterial({ color: 0xf0f0f0 });
-            const board = new THREE.Mesh(boardGeo, boardMat);
-            board.rotation.x = -Math.PI / 2;
-            scene.add(board);
-
-            // --- VẼ ĐƯỜNG MẠCH (TRACES) CHẠY GIỮA CÁC VÙNG ---
-            const lineMat = new THREE.LineBasicMaterial({ color: 0x00acc1, transparent: true, opacity: 0.4 });
-            for(let i=0; i<80; i++) {
-                const points = [];
-                let currX = THREE.MathUtils.randFloatSpread(40);
-                let currZ = THREE.MathUtils.randFloatSpread(40);
-                for(let j=0; j<3; j++) {
-                    points.push(new THREE.Vector3(currX, 0.05, currZ));
-                    currX += THREE.MathUtils.randFloatSpread(10);
-                    currZ += THREE.MathUtils.randFloatSpread(10);
-                }
-                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-                const line = new THREE.Line(lineGeo, lineMat);
-                scene.add(line);
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
             }
+        }
+    </script>
 
-            // --- HÀM TẠO LINH KIỆN ---
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-            // 1. CPU (Tòa nhà chính)
-            function createCPU(x, z) {
-                const group = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), new THREE.MeshPhongMaterial({color: 0x333333}));
-                const cap = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 2), new THREE.MeshStandardMaterial({color: 0xdddddd, metalness: 1}));
-                cap.position.y = 0.3;
-                group.add(body, cap);
-                group.position.set(x, 0.25, z);
-                cityGroup.add(group);
-            }
+        // --- CẤU HÌNH CƠ BẢN ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Bầu trời xanh ban ngày
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-            // 2. TỤ GỐM (Cây xanh)
-            function createCeramicCap(x, z) {
-                const group = new THREE.Group();
-                // Thân tụ hình tròn dẹt
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16),
-                    new THREE.MeshPhongMaterial({ color: 0x4caf50 }) // Màu xanh lá cây
-                );
-                body.rotation.x = Math.PI/2;
-                // Chân tụ như thân cây
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6), new THREE.MeshPhongMaterial({color: 0x999999}));
-                leg.position.y = -0.3;
-                group.add(body, leg);
-                group.position.set(x, 0.8, z);
-                cityGroup.add(group);
-            }
+        const controls = new OrbitControls(camera, renderer.domElement);
+        camera.position.set(15, 15, 15);
+        controls.update();
 
-            // 3. TỤ HÓA (Tòa nhà trụ)
-            function createCap(x, z) {
-                const body = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.5, 0.5, 2, 16),
-                    new THREE.MeshPhongMaterial({ color: 0x00838f })
-                );
-                body.position.set(x, 1, z);
-                cityGroup.add(body);
-            }
+        // --- ÁNH SÁNG (BAN NGÀY) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
 
-            // 4. ĐIỆN TRỞ (Resistor)
-            function createResistor(x, z) {
-                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.2), new THREE.MeshPhongMaterial({color: 0xd7ccc8}));
-                body.rotation.z = Math.PI/2;
-                body.position.set(x, 0.2, z);
-                cityGroup.add(body);
-            }
+        // --- NỀN PCB (BẢNG MẠCH XANH) ---
+        const pcbSize = 30;
+        const pcbGeometry = new THREE.BoxGeometry(pcbSize, 0.5, pcbSize);
+        const pcbMaterial = new THREE.MeshStandardMaterial({ color: 0x004d1a, roughness: 0.3 });
+        const pcb = new THREE.Mesh(pcbGeometry, pcbMaterial);
+        scene.add(pcb);
 
-            // RẢI LINH KIỆN (Tăng số lượng lên 150)
-            for (let i = 0; i < 150; i++) {
-                const x = THREE.MathUtils.randFloatSpread(50);
-                const z = THREE.MathUtils.randFloatSpread(50);
-                const type = Math.random();
-                
-                if(type > 0.95) createCPU(x, z);
-                else if(type > 0.7) createCeramicCap(x, z); // Tụ gốm xanh lá chiếm 25%
-                else if(type > 0.4) createResistor(x, z);
-                else createCap(x, z);
-            }
+        // Vẽ các đường mạch (Traces)
+        const grid = new THREE.GridHelper(pcbSize, 30, 0x00ff00, 0x003300);
+        grid.position.y = 0.26;
+        scene.add(grid);
 
-            window.addEventListener('resize', onWindowResize);
+        // --- HÀM TẠO LINH KIỆN ---
+
+        // 1. Điện trở (Resistors)
+        function createResistor(x, z) {
+            const group = new THREE.Group();
+            // Thân điện trở
+            const bodyGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.rotation.z = Math.PI / 2;
+            group.add(body);
+
+            // Chân kim loại
+            const wireGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.4, 8);
+            const wireMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+            const wire = new THREE.Mesh(wireGeo, wireMat);
+            wire.rotation.z = Math.PI / 2;
+            group.add(wire);
+
+            group.position.set(x, 0.6, z);
+            scene.add(group);
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // 2. Via (Lỗ xuyên mạch)
+        function createVia(x, z) {
+            const viaGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.55, 16);
+            const viaMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1 }); // Màu vàng đồng
+            const via = new THREE.Mesh(viaGeo, viaMat);
+            via.position.set(x, 0.25, z);
+            scene.add(via);
         }
 
+        // 3. Test Point (Điểm kiểm tra)
+        function createTestPoint(x, z) {
+            const tpGeo = new THREE.SphereGeometry(0.15, 16, 16);
+            const tpMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
+            const tp = new THREE.Mesh(tpGeo, tpMat);
+            tp.position.set(x, 0.5, z);
+            scene.add(tp);
+        }
+
+        // 4. Chip IC (Tòa nhà)
+        function createChip(x, z, w, d, h) {
+            const chipGeo = new THREE.BoxGeometry(w, h, d);
+            const chipMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const chip = new THREE.Mesh(chipGeo, chipMat);
+            chip.position.set(x, h/2 + 0.25, z);
+            scene.add(chip);
+        }
+
+        // --- KHỞI TẠO THÀNH PHỐ ---
+        for (let i = 0; i < 40; i++) {
+            let x = (Math.random() - 0.5) * pcbSize;
+            let z = (Math.random() - 0.5) * pcbSize;
+            
+            const rand = Math.random();
+            if (rand > 0.7) createResistor(x, z);
+            else if (rand > 0.4) createVia(x, z);
+            else if (rand > 0.2) createTestPoint(x, z);
+            else createChip(x, z, 1.5, 1.5, Math.random() * 2 + 0.5);
+        }
+
+        // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
-            const t = clock.getElapsedTime();
-
-            // Camera bay lượn nhẹ nhàng như chim bay trên thành phố
-            camera.position.x = Math.sin(t * 0.15) * 25;
-            camera.position.z = Math.cos(t * 0.15) * 25;
-            camera.position.y = 15 + Math.sin(t * 0.3) * 3;
-            camera.lookAt(0, 0, 0);
-
-            // Hiệu ứng các "cây tụ gốm" đung đưa nhẹ trong gió
-            cityGroup.children.forEach((obj, i) => {
-                if(obj.children.length > 0 && obj.children[0].material.color.g > 0.5) { // Kiểm tra nếu là tụ xanh
-                    obj.rotation.z = Math.sin(t + i) * 0.1;
-                }
-            });
-
+            controls.update();
             renderer.render(scene, camera);
         }
 
-        init();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
         animate();
     </script>
 </body>

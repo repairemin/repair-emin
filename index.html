@@ -6,533 +6,436 @@
     <title>Tiến Thắng Center - STM32 Banner</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@900&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        * { margin:0; padding:0; box-sizing:border-box; }
         body, html {
-            height: 100%;
-            background-color: #000;
-            overflow-x: hidden;
-            cursor: crosshair;
-            font-family: 'Share Tech Mono', monospace;
+            height:100%; background:#000;
+            overflow:hidden; cursor:crosshair;
         }
-
-        /* ── Layer 1: Background (giữ nguyên của mày) ── */
         .banner-container {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position:relative; width:100%; height:100vh;
+            overflow:hidden; display:flex;
+            align-items:center; justify-content:center;
         }
-
         .pcb-background {
-            position: absolute;
-            top: -2%;
-            left: -2%;
-            width: 104%;
-            height: 104%;
-            background-image: url('repair-emin.png');
-            background-size: cover;
-            background-position: center;
-            filter: brightness(0.75) saturate(1.1);
-            z-index: 1;
-            transition: transform 0.15s ease-out;
+            position:absolute; top:-2%; left:-2%;
+            width:104%; height:104%;
+            background-image:url('repair-emin.png');
+            background-size:cover; background-position:center;
+            filter:brightness(0.72) saturate(1.1);
+            z-index:1; transition:transform 0.15s ease-out;
         }
-
-        /* ── Layer 2: Canvas cho technicians ── */
-        #tech-canvas {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 5;
-            pointer-events: none;
-        }
-
-        /* ── Scanline overlay ── */
         .scanline-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 4;
-            pointer-events: none;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 3px,
-                rgba(0,0,0,0.03) 3px,
-                rgba(0,0,0,0.03) 4px
-            );
+            position:absolute; inset:0; z-index:2; pointer-events:none;
+            background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.025) 3px,rgba(0,0,0,0.025) 4px);
         }
-
-        /* ── HUD panels ── */
+        #tech-canvas {
+            position:absolute; inset:0; width:100%; height:100%;
+            z-index:5; pointer-events:none;
+        }
         .hud {
-            position: absolute;
-            z-index: 10;
-            font-size: 11px;
-            line-height: 2;
-            pointer-events: none;
-            background: rgba(0, 6, 3, 0.58);
-            border: 1px solid rgba(0,255,136,0.25);
-            padding: 10px 14px;
+            position:absolute; z-index:10;
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px; line-height:2; pointer-events:none;
+            background:rgba(0,6,3,0.60);
+            border:1px solid rgba(0,255,136,0.22);
+            padding:10px 14px;
         }
-        .hud-tl { top: 18px; left: 18px; color: #00ff88; }
-        .hud-tr { top: 18px; right: 18px; color: #00ccff; text-align: right; }
-        .hud .muted { color: rgba(255,255,255,0.4); font-size: 10px; }
-        .hud .ok    { color: #00ff88; }
-        .hud .warn  { color: #ffcc00; }
-
-        /* ── Corner brackets ── */
-        .corner { position: absolute; z-index: 6; width: 26px; height: 26px; pointer-events: none; }
-        .c-tl { top: 8px; left: 8px; }
-        .c-tr { top: 8px; right: 8px; transform: scaleX(-1); }
-        .c-bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
-        .c-br { bottom: 8px; right: 8px; transform: scale(-1,-1); }
-
-        /* ── Content overlay (giữ nguyên của mày, nâng z-index) ── */
+        .hud-tl { top:18px; left:18px; color:#00ff88; }
+        .hud-tr { top:18px; right:18px; color:#00ccff; text-align:right; }
+        .hud .muted { color:rgba(255,255,255,0.38); font-size:10px; }
+        .hud .ok   { color:#00ff88; }
+        .hud .warn { color:#ffcc00; }
+        .corner { position:absolute; z-index:6; width:26px; height:26px; pointer-events:none; }
+        .c-tl{top:8px;left:8px} .c-tr{top:8px;right:8px;transform:scaleX(-1)}
+        .c-bl{bottom:8px;left:8px;transform:scaleY(-1)} .c-br{bottom:8px;right:8px;transform:scale(-1,-1)}
         .content-overlay {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            color: white;
-            text-align: center;
-            pointer-events: none;
-            white-space: nowrap;
+            position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+            z-index:10; text-align:center; pointer-events:none; white-space:nowrap;
         }
-
         h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: clamp(22px, 4vw, 52px);
-            letter-spacing: 10px;
-            text-transform: uppercase;
-            text-shadow: 0px 0px 30px rgba(0,255,136,0.7), 0px 0px 60px rgba(0,255,136,0.3);
+            font-family:'Orbitron',sans-serif; font-weight:900;
+            font-size:clamp(22px,4vw,52px); letter-spacing:10px;
+            text-transform:uppercase; color:#fff;
+            text-shadow:0 0 30px rgba(0,255,136,0.7),0 0 60px rgba(0,255,136,0.3);
         }
-
         .content-overlay p {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: clamp(9px, 1vw, 13px);
-            letter-spacing: 4px;
-            color: #00ccff;
-            text-shadow: 0px 0px 10px rgba(0,204,255,0.6);
-            margin-top: 6px;
+            font-family:'Share Tech Mono',monospace;
+            font-size:clamp(9px,1vw,13px); letter-spacing:4px;
+            color:#00ccff; text-shadow:0 0 10px rgba(0,204,255,0.6);
+            margin-top:5px;
         }
     </style>
 </head>
 <body>
-
 <div class="banner-container">
-
-    <!-- Layer 1: Background của mày -->
     <div class="pcb-background" id="bgLayer"></div>
-
-    <!-- Scanline -->
     <div class="scanline-overlay"></div>
-
-    <!-- Canvas technicians -->
     <canvas id="tech-canvas"></canvas>
 
-    <!-- Corner brackets -->
     <div class="corner c-tl"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
     <div class="corner c-tr"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
     <div class="corner c-bl"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
     <div class="corner c-br"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
 
-    <!-- HUD trái: thông tin 2 thợ -->
     <div class="hud hud-tl">
-        <div>◈ TECH-01 &nbsp;<span class="ok" id="t1-status">SCANNING</span></div>
+        <div>◈ DRONE-01 &nbsp;<span class="ok" id="t1-status">EN ROUTE</span></div>
         <div><span class="muted">TARGET &nbsp;</span><span id="t1-target">STM32F407</span></div>
-        <div><span class="muted">MEASURE</span> <span id="t1-val">3.30V</span></div>
-        <div style="margin-top:5px">◈ TECH-02 &nbsp;<span class="ok" id="t2-status">SCANNING</span></div>
-        <div><span class="muted">TARGET &nbsp;</span><span id="t2-target">CAP_47uF</span></div>
-        <div><span class="muted">MEASURE</span> <span id="t2-val">220Ω</span></div>
+        <div><span class="muted">MEASURE</span> <span id="t1-val">—</span></div>
+        <div style="margin-top:5px">◈ DRONE-02 &nbsp;<span class="ok" id="t2-status">EN ROUTE</span></div>
+        <div><span class="muted">TARGET &nbsp;</span><span id="t2-target">IRFZ44N</span></div>
+        <div><span class="muted">MEASURE</span> <span id="t2-val">—</span></div>
     </div>
-
-    <!-- HUD phải: thống kê -->
     <div class="hud hud-tr">
         <div>SYS &nbsp;<span class="ok">● ONLINE</span></div>
         <div id="clock">00:00:00</div>
-        <div style="margin-top:5px"><span class="muted">CHECKED </span><span id="cnt-all" style="color:#00ccff">0</span></div>
+        <div style="margin-top:5px"><span class="muted">SCANNED </span><span style="color:#00ccff" id="cnt-all">0</span></div>
         <div><span class="muted">OK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span id="cnt-ok" class="ok">0</span></div>
-        <div><span class="muted">WARN &nbsp;&nbsp;&nbsp;</span><span id="cnt-warn" class="warn">0</span></div>
+        <div><span class="muted">FAULT &nbsp;&nbsp;</span><span id="cnt-warn" class="warn">0</span></div>
     </div>
 
-    <!-- Content overlay của mày -->
     <div class="content-overlay">
         <h1>STM32 CORE</h1>
         <p>High-End Electronics Repair &amp; Development &nbsp;·&nbsp; Tiến Thắng Center</p>
     </div>
-
 </div>
 
 <script>
-    // ── Parallax gốc của mày ──────────────────────────────────────
-    const bg = document.getElementById('bgLayer');
-    window.addEventListener('mousemove', (e) => {
-        const x = (window.innerWidth  / 2 - e.pageX) / 50;
-        const y = (window.innerHeight / 2 - e.pageY) / 50;
-        bg.style.transform = `translateX(${x}px) translateY(${y}px)`;
-    });
+/* ── Parallax ── */
+const bg = document.getElementById('bgLayer');
+window.addEventListener('mousemove', e => {
+    const x=(window.innerWidth/2-e.pageX)/50, y=(window.innerHeight/2-e.pageY)/50;
+    bg.style.transform=`translateX(${x}px) translateY(${y}px)`;
+});
 
-    // ── Canvas setup ──────────────────────────────────────────────
-    const canvas = document.getElementById('tech-canvas');
-    const ctx    = canvas.getContext('2d');
-    const wrap   = document.querySelector('.banner-container');
+/* ── Canvas ── */
+const canvas=document.getElementById('tech-canvas');
+const ctx=canvas.getContext('2d');
+const wrap=document.querySelector('.banner-container');
+function resize(){ canvas.width=wrap.clientWidth; canvas.height=wrap.clientHeight; }
+resize(); window.addEventListener('resize',resize);
+const W=()=>canvas.width, H=()=>canvas.height;
 
-    function resize() {
-        canvas.width  = wrap.clientWidth;
-        canvas.height = wrap.clientHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
+/* ── Components ── */
+const COMPS=[
+    {x:0.47,y:0.43,name:'STM32F407', type:'IC',    col:'#c084fc'},
+    {x:0.63,y:0.62,name:'74HC16SD',  type:'IC',    col:'#c084fc'},
+    {x:0.68,y:0.73,name:'LM35S',     type:'IC',    col:'#c084fc'},
+    {x:0.73,y:0.39,name:'AT24C02',   type:'EEPROM',col:'#e879f9'},
+    {x:0.15,y:0.43,name:'INDUCTOR',  type:'COIL',  col:'#fbbf24'},
+    {x:0.08,y:0.20,name:'CAP_470uF', type:'CAP',   col:'#34d399'},
+    {x:0.25,y:0.10,name:'CAP_220uF', type:'CAP',   col:'#34d399'},
+    {x:0.79,y:0.17,name:'CAP_100uF', type:'CAP',   col:'#34d399'},
+    {x:0.88,y:0.48,name:'IRFZ44N',   type:'FET',   col:'#f87171'},
+    {x:0.91,y:0.28,name:'IRFZ44N_2', type:'FET',   col:'#f87171'},
+    {x:0.50,y:0.82,name:'RES_220Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.30,y:0.72,name:'RES_470Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.38,y:0.27,name:'LED_RED',   type:'LED',   col:'#f87171'},
+    {x:0.57,y:0.22,name:'LED_GRN',   type:'LED',   col:'#4ade80'},
+    {x:0.20,y:0.58,name:'DIODE_D1',  type:'DIODE', col:'#fb923c'},
+    {x:0.42,y:0.60,name:'CRYSTAL',   type:'XTAL',  col:'#a5f3fc'},
+];
 
-    const W = () => canvas.width;
-    const H = () => canvas.height;
+/* ── Readings ── */
+const READS={
+    IC:    ()=>({v:(3.1+Math.random()*0.5).toFixed(2)+'V', lbl:rp(88)?'OK':'WARN'}),
+    CAP:   ()=>({v:(~~(Math.random()*900+100))+'Ω',         lbl:rp(85)?'OK':'LEAK'}),
+    COIL:  ()=>({v:(~~(Math.random()*60+5))+'Ω',            lbl:'OK'}),
+    FET:   ()=>({v:(4.5+Math.random()).toFixed(1)+'V',       lbl:rp(80)?'OK':'GATE_ERR'}),
+    RES:   ()=>({v:(~~(Math.random()*800+100))+'Ω',          lbl:'OK'}),
+    EEPROM:()=>({v:'3.30V',lbl:'OK'}),
+    LED:   ()=>({v:(1.8+Math.random()*0.5).toFixed(2)+'V',  lbl:rp(82)?'OK':'FAIL'}),
+    DIODE: ()=>({v:(0.55+Math.random()*0.15).toFixed(2)+'V',lbl:'OK'}),
+    XTAL:  ()=>({v:'3.30V',lbl:rp(90)?'OK':'DRIFT'}),
+};
+function rp(p){return Math.random()*100<p;}
+let cntAll=0,cntOk=0,cntWarn=0;
 
-    // ── Tọa độ linh kiện calibrate theo repair-emin.png ──────────
-    const COMPS = [
-        { x:0.47, y:0.43, name:'STM32F407',  type:'IC',    col:'#c084fc' },
-        { x:0.63, y:0.62, name:'74HC16SD',   type:'IC',    col:'#c084fc' },
-        { x:0.68, y:0.73, name:'LM35S',      type:'IC',    col:'#c084fc' },
-        { x:0.73, y:0.39, name:'AT24C02',    type:'EEPROM',col:'#e879f9' },
-        { x:0.15, y:0.43, name:'INDUCTOR',   type:'COIL',  col:'#fbbf24' },
-        { x:0.08, y:0.20, name:'CAP_470uF',  type:'CAP',   col:'#34d399' },
-        { x:0.25, y:0.10, name:'CAP_220uF',  type:'CAP',   col:'#34d399' },
-        { x:0.79, y:0.17, name:'CAP_100uF',  type:'CAP',   col:'#34d399' },
-        { x:0.88, y:0.48, name:'IRFZ44N',    type:'FET',   col:'#f87171' },
-        { x:0.91, y:0.28, name:'IRFZ44N_2',  type:'FET',   col:'#f87171' },
-        { x:0.50, y:0.82, name:'RES_220Ω',   type:'RES',   col:'#60a5fa' },
-        { x:0.30, y:0.72, name:'RES_470Ω',   type:'RES',   col:'#60a5fa' },
-        { x:0.38, y:0.27, name:'LED_RED',    type:'LED',   col:'#f87171' },
-        { x:0.57, y:0.22, name:'LED_GRN',    type:'LED',   col:'#4ade80' },
-        { x:0.20, y:0.58, name:'DIODE_D1',   type:'DIODE', col:'#fb923c' },
-        { x:0.42, y:0.60, name:'CRYSTAL',    type:'XTAL',  col:'#a5f3fc' },
-    ];
+function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
 
-    // ── Số đo giả lập ────────────────────────────────────────────
-    const READS = {
-        IC:    ()=>({ v:(3.1+Math.random()*0.5).toFixed(2)+'V', lbl:p(88)?'OK':'WARN' }),
-        CAP:   ()=>({ v:(~~(Math.random()*900+100))+'Ω',         lbl:p(85)?'OK':'LEAK' }),
-        COIL:  ()=>({ v:(~~(Math.random()*60+5))+'Ω',            lbl:'OK' }),
-        FET:   ()=>({ v:(4.5+Math.random()).toFixed(1)+'V',       lbl:p(80)?'OK':'GATE_ERR' }),
-        RES:   ()=>({ v:(~~(Math.random()*800+100))+'Ω',          lbl:'OK' }),
-        EEPROM:()=>({ v:'3.30V',                                   lbl:'OK' }),
-        LED:   ()=>({ v:(1.8+Math.random()*0.5).toFixed(2)+'V',  lbl:p(82)?'OK':'FAIL' }),
-        DIODE: ()=>({ v:(0.55+Math.random()*0.15).toFixed(2)+'V',lbl:'OK' }),
-        XTAL:  ()=>({ v:'3.30V',                                   lbl:p(90)?'OK':'DRIFT' }),
-    };
-    function p(pct){ return Math.random()*100 < pct; }
-
-    let cntAll=0, cntOk=0, cntWarn=0;
-
-    // ── Class Technician ──────────────────────────────────────────
-    class Tech {
-        constructor(id, bodyCol, toolCol, sx, sy) {
-            this.id=id; this.bodyCol=bodyCol; this.toolCol=toolCol;
-            this.x=sx; this.y=sy; this.tx=sx; this.ty=sy;
-            this.state='moving'; this.waitT=0; this.inspT=0;
-            this.target=null; this.frame=~~(Math.random()*100);
-            this.stepA=0; this.toolAng=0; this.facing=1;
-            this.speed=0.0009+Math.random()*0.0004;
-            this.ripples=[]; this.popups=[];
-            this.pickNext();
-        }
-
-        pickNext() {
-            const c = COMPS[~~(Math.random()*COMPS.length)];
-            this.tx = Math.max(0.04, Math.min(0.96, c.x+(Math.random()-.5)*0.04));
-            this.ty = Math.max(0.06, Math.min(0.90, c.y+(Math.random()-.5)*0.04));
-            this.target = c;
-            this.state  = 'moving';
-        }
-
-        update() {
-            this.frame++;
-            const dx=this.tx-this.x, dy=this.ty-this.y;
-            const dist=Math.sqrt(dx*dx+dy*dy);
-
-            if (this.state==='moving') {
-                if (dist > 0.007) {
-                    this.facing = dx>0 ? 1 : -1;
-                    const spd = this.speed*60;
-                    this.x += dx/dist*spd*0.016;
-                    this.y += dy/dist*spd*0.016;
-                    this.stepA += 0.22;
-                } else {
-                    this.state='waiting';
-                    this.waitT=35+~~(Math.random()*25);
-                }
-            } else if (this.state==='waiting') {
-                this.toolAng = Math.sin(this.frame*0.10)*0.2;
-                if (--this.waitT<=0) {
-                    this.state='inspecting';
-                    this.inspT=80+~~(Math.random()*60);
-                    this.ripples.push({t:0});
-                }
-            } else if (this.state==='inspecting') {
-                this.toolAng = Math.sin(this.frame*0.22)*0.6;
-                if (this.frame%20===0) this.ripples.push({t:0});
-                if (--this.inspT<=0) {
-                    const c   = this.target;
-                    const rd  = (READS[c.type]||READS.IC)();
-                    const isW = rd.lbl!=='OK';
-                    this.popups.push({ x:this.x, y:this.y-0.09, text:c.name+' ['+rd.lbl+']', col:isW?'#ffcc00':'#00ff88', life:110 });
-                    cntAll++; isW ? cntWarn++ : cntOk++;
-                    document.getElementById('cnt-all').textContent  = cntAll;
-                    document.getElementById('cnt-ok').textContent   = cntOk;
-                    document.getElementById('cnt-warn').textContent = cntWarn;
-                    if (this.id===0) {
-                        document.getElementById('t1-target').textContent = c.name;
-                        document.getElementById('t1-val').textContent    = rd.v;
-                        const el=document.getElementById('t1-status');
-                        el.textContent=rd.lbl; el.className=isW?'warn':'ok';
-                    } else {
-                        document.getElementById('t2-target').textContent = c.name;
-                        document.getElementById('t2-val').textContent    = rd.v;
-                        const el=document.getElementById('t2-status');
-                        el.textContent=rd.lbl; el.className=isW?'warn':'ok';
-                    }
-                    this.pickNext();
-                }
-            }
-
-            this.ripples = this.ripples.filter(r=>{ r.t++; return r.t<45; });
-            this.popups  = this.popups.filter(p=>{ p.life--; p.y-=0.0006; return p.life>0; });
-        }
-
-        draw() {
-            const cw=W(), ch=H();
-            const px=this.x*cw, py=this.y*ch;
-            const sc=Math.min(cw,ch)*0.052;
-
-            // Ripple rings
-            this.ripples.forEach(r=>{
-                const pr=r.t/45;
-                ctx.beginPath();
-                ctx.arc(px, py, sc*2.2*pr, 0, Math.PI*2);
-                ctx.strokeStyle=this.bodyCol+Math.round((1-pr)*200).toString(16).padStart(2,'0');
-                ctx.lineWidth=1.5;
-                ctx.stroke();
-            });
-
-            ctx.save();
-            ctx.translate(px, py);
-            ctx.scale(this.facing, 1);
-
-            const bob = this.state==='inspecting'
-                ? Math.sin(this.frame*0.18)*1.8
-                : this.state==='moving'
-                    ? Math.sin(this.stepA)*2.5 : 0;
-            ctx.translate(0, bob);
-
-            // Shadow
-            ctx.beginPath();
-            ctx.ellipse(0, sc*0.55, sc*0.45, sc*0.10, 0, 0, Math.PI*2);
-            ctx.fillStyle='rgba(0,0,0,0.35)';
-            ctx.fill();
-
-            // Feet
-            const lb = this.state==='moving' ? Math.sin(this.stepA)*sc*0.18 : 0;
-            ctx.fillStyle='#111';
-            ctx.fillRect(-sc*0.30, sc*0.28+lb,  sc*0.24, sc*0.12);
-            ctx.fillRect( sc*0.06, sc*0.28-lb,  sc*0.24, sc*0.12);
-
-            // Legs
-            ctx.fillStyle='#2d6a46';
-            ctx.fillRect(-sc*0.28, sc*0.00,  sc*0.22, sc*0.30+lb);
-            ctx.fillRect( sc*0.06, sc*0.00,  sc*0.22, sc*0.30-lb);
-
-            // Belt
-            ctx.fillStyle=this.bodyCol;
-            ctx.fillRect(-sc*0.34, -sc*0.03, sc*0.68, sc*0.07);
-
-            // Torso
-            ctx.fillStyle='#1e4d32';
-            ctx.fillRect(-sc*0.32, -sc*0.52, sc*0.64, sc*0.50);
-
-            // Chest patch
-            ctx.fillStyle=this.bodyCol+'44';
-            ctx.fillRect(-sc*0.22, -sc*0.44, sc*0.20, sc*0.18);
-            ctx.strokeStyle=this.bodyCol+'88';
-            ctx.lineWidth=0.8;
-            ctx.strokeRect(-sc*0.22, -sc*0.44, sc*0.20, sc*0.18);
-
-            // Helmet
-            ctx.fillStyle='#1a3d28';
-            ctx.beginPath();
-            ctx.ellipse(0, -sc*0.62, sc*0.30, sc*0.18, 0, Math.PI, 0);
-            ctx.fill();
-
-            // Visor
-            ctx.fillStyle=this.bodyCol+'55';
-            ctx.beginPath();
-            ctx.ellipse(0, -sc*0.58, sc*0.20, sc*0.09, 0, Math.PI, 0);
-            ctx.fill();
-
-            // Head
-            ctx.fillStyle='#d4a87a';
-            ctx.beginPath();
-            ctx.arc(0, -sc*0.78, sc*0.30, 0, Math.PI*2);
-            ctx.fill();
-            ctx.strokeStyle=this.bodyCol+'99';
-            ctx.lineWidth=1.2;
-            ctx.stroke();
-
-            // Eyes
-            ctx.fillStyle='#222';
-            ctx.beginPath(); ctx.arc(-sc*0.09,-sc*0.80,sc*0.055,0,Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc( sc*0.09,-sc*0.80,sc*0.055,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#fff';
-            ctx.beginPath(); ctx.arc(-sc*0.07,-sc*0.82,sc*0.022,0,Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc( sc*0.11,-sc*0.82,sc*0.022,0,Math.PI*2); ctx.fill();
-
-            // ID
-            ctx.fillStyle=this.bodyCol;
-            ctx.font=`bold ${sc*0.19}px monospace`;
-            ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillText('T'+(this.id+1), 0, -sc*0.78);
-
-            // Right arm + Multimeter
-            ctx.save();
-            ctx.translate(sc*0.42, -sc*0.32);
-            ctx.rotate(this.toolAng);
-            ctx.fillStyle='#d4a87a';
-            ctx.fillRect(-sc*0.07, 0, sc*0.13, sc*0.26);
-            // meter body
-            ctx.fillStyle='#222';
-            ctx.beginPath();
-            if (ctx.roundRect) ctx.roundRect(-sc*0.12,-sc*0.26,sc*0.24,sc*0.18,sc*0.03);
-            else ctx.rect(-sc*0.12,-sc*0.26,sc*0.24,sc*0.18);
-            ctx.fill();
-            // meter screen
-            ctx.fillStyle='#00ff88';
-            ctx.fillRect(-sc*0.08,-sc*0.24,sc*0.16,sc*0.09);
-            ctx.fillStyle='#003300';
-            ctx.font=`${sc*0.075}px monospace`;
-            ctx.fillText('3.3V', 0, -sc*0.195);
-            // probes
-            ctx.strokeStyle='#f00'; ctx.lineWidth=1.2;
-            ctx.beginPath(); ctx.moveTo(-sc*0.04,-sc*0.08); ctx.lineTo(-sc*0.04,sc*0.26); ctx.stroke();
-            ctx.strokeStyle='#000';
-            ctx.beginPath(); ctx.moveTo(sc*0.04,-sc*0.08); ctx.lineTo(sc*0.04,sc*0.26); ctx.stroke();
-            // probe beam to target
-            if (this.state==='inspecting' && this.target) {
-                const tcx=this.target.x*cw, tcy=this.target.y*ch;
-                const lx=(tcx-px)*this.facing, ly=tcy-py;
-                ctx.save();
-                ctx.scale(this.facing, 1);
-                ctx.strokeStyle=this.toolCol+'bb';
-                ctx.lineWidth=1; ctx.setLineDash([3,4]); ctx.globalAlpha=0.65;
-                ctx.beginPath(); ctx.moveTo(0,sc*0.26); ctx.lineTo(lx*0.5,ly*0.5); ctx.stroke();
-                ctx.setLineDash([]); ctx.restore();
-            }
-            ctx.restore();
-
-            // Left arm + Clipboard
-            ctx.save();
-            ctx.translate(-sc*0.42, -sc*0.28);
-            ctx.rotate(-this.toolAng*0.4);
-            ctx.fillStyle='#d4a87a';
-            ctx.fillRect(-sc*0.07, 0, sc*0.13, sc*0.26);
-            ctx.fillStyle='#fffde7';
-            ctx.fillRect(-sc*0.12,-sc*0.22,sc*0.20,sc*0.24);
-            ctx.fillStyle='#bbb';
-            ctx.fillRect(-sc*0.07,-sc*0.26,sc*0.10,sc*0.055);
-            ctx.fillStyle='#999';
-            for(let i=0;i<3;i++) ctx.fillRect(-sc*0.09,-sc*0.16+i*sc*0.07,sc*0.14,sc*0.018);
-            ctx.restore();
-
-            // Status label
-            if (this.state!=='moving') {
-                const lbl = this.state==='waiting'?'▶ APPROACH':'⬡ SCANNING';
-                ctx.save();
-                ctx.scale(this.facing,1);
-                ctx.font=`${sc*0.19}px monospace`;
-                ctx.fillStyle=this.bodyCol+'dd';
-                ctx.textAlign='center';
-                ctx.fillText(lbl, 0, -sc*1.28);
-                ctx.restore();
-            }
-
-            ctx.restore();
-
-            // Popups
-            this.popups.forEach(pp=>{
-                const ppx=pp.x*cw, ppy=pp.y*ch;
-                const a=Math.min(1,pp.life/18);
-                ctx.save(); ctx.globalAlpha=a;
-                ctx.font='10px monospace';
-                const tw=ctx.measureText(pp.text).width+16;
-                ctx.fillStyle='rgba(0,6,3,0.82)';
-                ctx.strokeStyle=pp.col; ctx.lineWidth=1;
-                ctx.beginPath();
-                if (ctx.roundRect) ctx.roundRect(ppx-tw/2,ppy-12,tw,22,3);
-                else ctx.rect(ppx-tw/2,ppy-12,tw,22);
-                ctx.fill(); ctx.stroke();
-                ctx.fillStyle=pp.col;
-                ctx.textAlign='center'; ctx.textBaseline='middle';
-                ctx.fillText(pp.text,ppx,ppy);
-                ctx.restore();
-            });
-        }
+/* ══════════════ Drone class ══════════════ */
+class Drone {
+    constructor(id, accentCol, beamCol, sx, sy){
+        this.id=id; this.accentCol=accentCol; this.beamCol=beamCol;
+        this.x=sx*W(); this.y=sy*H();
+        this.sx=this.x; this.sy=this.y;
+        this.tx=this.x; this.ty=this.y;
+        this.tProg=1; this.flightDur=1;
+        this.hoverPhase=Math.random()*Math.PI*2;
+        this.enginePhase=0;
+        this.state='flying';
+        this.scanT=0; this.scanDur=0;
+        this.target=null;
+        this.beamAlpha=0;
+        this.popups=[]; this.rings=[];
+        this.pickNext();
     }
 
-    // ── Component dot markers ─────────────────────────────────────
-    function drawDots() {
-        const sc=Math.min(W(),H())*0.011;
-        COMPS.forEach(c=>{
-            const px=c.x*W(), py=c.y*H();
-            const pulse=(Math.sin(performance.now()*0.0018+c.x*8)*0.5+0.5);
+    pickNext(){
+        const c=COMPS[~~(Math.random()*COMPS.length)];
+        const nx=c.x*W();
+        const ny=c.y*H()-H()*0.13;
+        this.sx=this.x; this.sy=this.y;
+        this.tx=nx; this.ty=ny;
+        this.tProg=0;
+        const dist=Math.hypot(nx-this.x,ny-this.y);
+        this.flightDur=Math.max(80,dist*0.16);
+        this.target=c; this.state='flying'; this.beamAlpha=0;
+    }
+
+    update(){
+        this.hoverPhase+=0.032; this.enginePhase+=0.09;
+
+        if(this.state==='flying'){
+            this.tProg=Math.min(1,this.tProg+1/this.flightDur);
+            const t=easeInOut(this.tProg);
+            const arc=Math.sin(this.tProg*Math.PI)*(-H()*0.09);
+            this.x=this.sx+(this.tx-this.sx)*t;
+            this.y=this.sy+(this.ty-this.sy)*t+arc;
+            if(this.tProg>=1){
+                this.state='scanning';
+                this.scanDur=110+~~(Math.random()*70);
+                this.scanT=this.scanDur;
+                this.rings=[];
+            }
+        } else if(this.state==='scanning'){
+            this.x=this.tx+Math.sin(this.hoverPhase*0.6)*3.5;
+            this.y=this.ty+Math.sin(this.hoverPhase)*5;
+            this.beamAlpha=Math.min(1,this.beamAlpha+0.045);
+            this.scanT--;
+            if(this.scanT%16===0) this.rings.push({t:0,x:this.target.x*W(),y:this.target.y*H()});
+            if(this.scanT<=0){
+                const rd=(READS[this.target.type]||READS.IC)();
+                const isW=rd.lbl!=='OK';
+                this.popups.push({
+                    x:this.target.x*W(), y:this.target.y*H()-24,
+                    text:this.target.name+' → '+rd.lbl+' ['+rd.v+']',
+                    col:isW?'#ffcc00':'#00ff88', life:140
+                });
+                cntAll++; isW?cntWarn++:cntOk++;
+                document.getElementById('cnt-all').textContent=cntAll;
+                document.getElementById('cnt-ok').textContent=cntOk;
+                document.getElementById('cnt-warn').textContent=cntWarn;
+                const p=this.id===0?'t1':'t2';
+                document.getElementById(p+'-target').textContent=this.target.name;
+                document.getElementById(p+'-val').textContent=rd.v;
+                const el=document.getElementById(p+'-status');
+                el.textContent=rd.lbl; el.className=isW?'warn':'ok';
+                this.beamAlpha=0; this.pickNext();
+            }
+        }
+        this.rings=this.rings.filter(r=>{r.t++;return r.t<55;});
+        this.popups=this.popups.filter(pp=>{pp.life--;pp.y-=0.3;return pp.life>0;});
+    }
+
+    draw(){
+        const cw=W(),ch=H(),px=this.x,py=this.y;
+        const sc=Math.min(cw,ch)*0.048;
+        const flick=0.82+Math.random()*0.18;
+
+        /* Ground rings */
+        if(this.state==='scanning'){
+            const gx=this.target.x*cw, gy=this.target.y*ch;
+            this.rings.forEach(r=>{
+                const prog=r.t/55;
+                ctx.beginPath();
+                ctx.ellipse(gx,gy,sc*(0.5+prog*3),sc*(0.14+prog*0.85),0,0,Math.PI*2);
+                ctx.strokeStyle=this.beamCol+Math.round((1-prog)*190).toString(16).padStart(2,'0');
+                ctx.lineWidth=1.3; ctx.stroke();
+            });
+        }
+
+        /* Beam cone */
+        if(this.state==='scanning'&&this.beamAlpha>0.01){
+            const gx=this.target.x*cw, gy=this.target.y*ch;
+            const a=this.beamAlpha*flick;
+            const spread=sc*1.6;
+            const grad=ctx.createLinearGradient(px,py+sc*0.35,gx,gy);
+            grad.addColorStop(0,this.beamCol+Math.round(a*160).toString(16).padStart(2,'0'));
+            grad.addColorStop(0.6,this.beamCol+Math.round(a*60).toString(16).padStart(2,'0'));
+            grad.addColorStop(1,this.beamCol+'00');
             ctx.beginPath();
-            ctx.arc(px,py,sc*(1+pulse*0.9),0,Math.PI*2);
-            ctx.strokeStyle=c.col+'44'; ctx.lineWidth=1; ctx.stroke();
+            ctx.moveTo(px-sc*0.20,py+sc*0.35);
+            ctx.lineTo(gx-spread,gy);
+            ctx.lineTo(gx+spread,gy);
+            ctx.lineTo(px+sc*0.20,py+sc*0.35);
+            ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+            /* center ray */
+            ctx.beginPath(); ctx.moveTo(px,py+sc*0.35); ctx.lineTo(gx,gy);
+            ctx.strokeStyle=this.beamCol+Math.round(a*230).toString(16).padStart(2,'0');
+            ctx.lineWidth=1.8; ctx.stroke();
+            /* sweep line */
+            const sw=((performance.now()/700)%1);
+            const sy2=py+sc*0.35+(gy-(py+sc*0.35))*sw;
             ctx.beginPath();
-            ctx.arc(px,py,sc*0.45,0,Math.PI*2);
-            ctx.fillStyle=c.col+'88'; ctx.fill();
-            ctx.fillStyle=c.col+'bb';
-            ctx.font='8px monospace'; ctx.textAlign='center';
-            ctx.fillText(c.name, px, py-sc-3);
+            ctx.moveTo(px-sc*0.18*(1-sw*0.6),sy2);
+            ctx.lineTo(px+sc*0.18*(1-sw*0.6),sy2);
+            ctx.strokeStyle=this.beamCol+Math.round(a*200).toString(16).padStart(2,'0');
+            ctx.lineWidth=0.8; ctx.stroke();
+        }
+
+        /* ── Draw ship ── */
+        ctx.save();
+        ctx.translate(px,py);
+        const tilt=this.state==='flying'
+            ?Math.atan2(this.ty-this.sy,this.tx-this.sx)*0.12
+            :Math.sin(this.hoverPhase*0.5)*0.035;
+        ctx.rotate(tilt);
+
+        /* Engine flames */
+        const eA=0.45+Math.sin(this.enginePhase)*0.3;
+        [-sc*0.52,0,sc*0.52].forEach(tx2=>{
+            /* nozzle */
+            ctx.fillStyle='#1a1a2e';
+            ctx.beginPath(); ctx.ellipse(tx2,sc*0.28,sc*0.095,sc*0.055,0,0,Math.PI*2); ctx.fill();
+            /* flame */
+            const fg=ctx.createRadialGradient(tx2,sc*0.30,0,tx2,sc*0.36,sc*0.26);
+            fg.addColorStop(0,'#fff');
+            fg.addColorStop(0.2,this.accentCol);
+            fg.addColorStop(0.6,this.accentCol+'88');
+            fg.addColorStop(1,this.accentCol+'00');
+            ctx.beginPath();
+            ctx.ellipse(tx2,sc*0.30,sc*0.075,sc*(0.14+eA*0.12)*(0.75+Math.random()*0.5),0,0,Math.PI*2);
+            ctx.fillStyle=fg; ctx.fill();
+        });
+
+        /* Lower hull disc */
+        const hg=ctx.createRadialGradient(-sc*0.1,-sc*0.02,0,0,sc*0.05,sc*0.72);
+        hg.addColorStop(0,'#4a5568'); hg.addColorStop(0.55,'#2d3748'); hg.addColorStop(1,'#1a202c');
+        ctx.beginPath(); ctx.ellipse(0,sc*0.06,sc*0.74,sc*0.26,0,0,Math.PI*2);
+        ctx.fillStyle=hg; ctx.fill();
+        ctx.strokeStyle=this.accentCol+'55'; ctx.lineWidth=1.2; ctx.stroke();
+
+        /* Hull ring grooves */
+        [0.58,0.44].forEach(r=>{
+            ctx.beginPath(); ctx.ellipse(0,sc*0.04,sc*r,sc*r*0.35,0,0,Math.PI*2);
+            ctx.strokeStyle=this.accentCol+'30'; ctx.lineWidth=0.7; ctx.stroke();
+        });
+
+        /* Cockpit dome */
+        const cg=ctx.createRadialGradient(-sc*0.12,-sc*0.30,0,0,-sc*0.16,sc*0.40);
+        cg.addColorStop(0,'#5a8aaa'); cg.addColorStop(0.45,'#2a4a6a'); cg.addColorStop(1,'#091826');
+        ctx.beginPath(); ctx.ellipse(0,-sc*0.12,sc*0.40,sc*0.28,0,0,Math.PI*2);
+        ctx.fillStyle=cg; ctx.fill();
+        ctx.strokeStyle=this.accentCol+'99'; ctx.lineWidth=1.3; ctx.stroke();
+        /* cockpit glint */
+        ctx.beginPath(); ctx.ellipse(-sc*0.10,-sc*0.22,sc*0.14,sc*0.07,-0.4,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.14)'; ctx.fill();
+
+        /* Side nav lights */
+        const blink=Math.sin(performance.now()*0.0038)*0.5+0.5;
+        [[-sc*0.70,sc*0.05,'#ff6b6b'],[sc*0.70,sc*0.05,'#6bceff']].forEach(([lx,ly,lc])=>{
+            ctx.beginPath(); ctx.arc(lx,ly,sc*0.065,0,Math.PI*2);
+            ctx.fillStyle=lc+Math.round(blink*255).toString(16).padStart(2,'0'); ctx.fill();
+            const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,sc*0.22);
+            lg.addColorStop(0,lc+'55'); lg.addColorStop(1,lc+'00');
+            ctx.beginPath(); ctx.arc(lx,ly,sc*0.22,0,Math.PI*2); ctx.fillStyle=lg; ctx.fill();
+        });
+
+        /* Belly scan glow */
+        if(this.state==='scanning'){
+            const sg=ctx.createRadialGradient(0,sc*0.26,0,0,sc*0.26,sc*0.40);
+            sg.addColorStop(0,this.beamCol+Math.round(this.beamAlpha*flick*200).toString(16).padStart(2,'0'));
+            sg.addColorStop(1,this.beamCol+'00');
+            ctx.beginPath(); ctx.ellipse(0,sc*0.26,sc*0.38,sc*0.20,0,0,Math.PI*2);
+            ctx.fillStyle=sg; ctx.fill();
+        }
+
+        /* Drone ID text */
+        ctx.fillStyle=this.accentCol+'dd';
+        ctx.font=`bold ${sc*0.21}px monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('D'+(this.id+1),0,-sc*0.11);
+
+        /* Outer aura glow */
+        const aura=ctx.createRadialGradient(0,0,sc*0.35,0,0,sc*1.15);
+        aura.addColorStop(0,this.accentCol+'00');
+        aura.addColorStop(0.65,this.accentCol+'0e');
+        aura.addColorStop(1,this.accentCol+'00');
+        ctx.beginPath(); ctx.ellipse(0,0,sc*1.15,sc*0.72,0,0,Math.PI*2);
+        ctx.fillStyle=aura; ctx.fill();
+
+        ctx.restore();
+
+        /* Flight path dashes */
+        if(this.state==='flying'&&this.tProg<0.88){
+            ctx.save(); ctx.globalAlpha=0.22; ctx.setLineDash([4,7]);
+            ctx.strokeStyle=this.accentCol; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(px,py);
+            ctx.lineTo(this.tx,this.ty+H()*0.13); ctx.stroke();
+            ctx.setLineDash([]); ctx.restore();
+        }
+
+        /* Popups */
+        this.popups.forEach(pp=>{
+            const a=Math.min(1,pp.life/22);
+            ctx.save(); ctx.globalAlpha=a;
+            ctx.font='bold 11px monospace';
+            const tw=ctx.measureText(pp.text).width+20;
+            ctx.fillStyle='rgba(0,6,3,0.88)';
+            ctx.strokeStyle=pp.col; ctx.lineWidth=1;
+            ctx.beginPath();
+            if(ctx.roundRect) ctx.roundRect(pp.x-tw/2,pp.y-13,tw,24,4);
+            else ctx.rect(pp.x-tw/2,pp.y-13,tw,24);
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle=pp.col; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(pp.text,pp.x,pp.y); ctx.restore();
         });
     }
+}
 
-    // ── Scan sweep ────────────────────────────────────────────────
-    function drawScan() {
-        const t=(performance.now()/4500)%1;
-        const y=t*H();
-        ctx.fillStyle='rgba(0,255,136,0.035)';
-        ctx.fillRect(0,y-40,W(),80);
-    }
+/* ── Dot markers ── */
+function drawDots(){
+    COMPS.forEach(c=>{
+        const px=c.x*W(),py=c.y*H(),sc=Math.min(W(),H())*0.010;
+        const pulse=Math.sin(performance.now()*0.0016+c.x*10)*0.5+0.5;
+        ctx.beginPath(); ctx.arc(px,py,sc*(1+pulse),0,Math.PI*2);
+        ctx.strokeStyle=c.col+'33'; ctx.lineWidth=1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(px,py,sc*0.4,0,Math.PI*2);
+        ctx.fillStyle=c.col+'77'; ctx.fill();
+        ctx.fillStyle=c.col+'aa'; ctx.font='8px monospace'; ctx.textAlign='center';
+        ctx.fillText(c.name,px,py-sc-3);
+    });
+}
 
-    // ── Clock ─────────────────────────────────────────────────────
-    const t0=Date.now();
-    function updateClock() {
-        const e=~~((Date.now()-t0)/1000);
-        document.getElementById('clock').textContent=
-            String(~~(e/3600)).padStart(2,'0')+':'+
-            String(~~((e%3600)/60)).padStart(2,'0')+':'+
-            String(e%60).padStart(2,'0');
-    }
+/* ── Sweep line ── */
+function drawSweep(){
+    const t=(performance.now()/5000)%1;
+    ctx.fillStyle='rgba(0,255,136,0.022)';
+    ctx.fillRect(0,t*H()-40,W(),80);
+}
 
-    // ── Khởi tạo 2 thợ ───────────────────────────────────────────
-    const techs = [
-        new Tech(0, '#00ff88', '#00ccff', 0.28, 0.50),
-        new Tech(1, '#00d4ff', '#ff6ec7', 0.65, 0.55),
-    ];
+/* ── Clock ── */
+const t0=Date.now();
+function updateClock(){
+    const e=~~((Date.now()-t0)/1000);
+    document.getElementById('clock').textContent=
+        String(~~(e/3600)).padStart(2,'0')+':'+
+        String(~~((e%3600)/60)).padStart(2,'0')+':'+
+        String(e%60).padStart(2,'0');
+}
 
-    // ── Main loop ─────────────────────────────────────────────────
-    function loop() {
-        ctx.clearRect(0,0,W(),H());
-        drawScan();
-        drawDots();
-        techs.forEach(t=>{ t.update(); t.draw(); });
-        updateClock();
-        requestAnimationFrame(loop);
-    }
-    loop();
+/* ── Status HUD ── */
+function updateStatus(d){
+    const p=d.id===0?'t1':'t2';
+    document.getElementById(p+'-status').textContent=
+        d.state==='flying'?'EN ROUTE':d.state==='scanning'?'SCANNING':'IDLE';
+}
+
+/* ── Init ── */
+const drones=[
+    new Drone(0,'#00ff88','#00ffcc',0.22,0.30),
+    new Drone(1,'#00aaff','#aaccff',0.72,0.28),
+];
+
+/* ── Loop ── */
+function loop(){
+    ctx.clearRect(0,0,W(),H());
+    drawSweep(); drawDots();
+    drones.forEach(d=>{ d.update(); updateStatus(d); d.draw(); });
+    updateClock();
+    requestAnimationFrame(loop);
+}
+loop();
 </script>
-
 </body>
 </html>

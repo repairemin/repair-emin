@@ -115,6 +115,30 @@
 @keyframes blink{0%,100%{opacity:.7}50%{opacity:.15}} 
 
 
+
+
+#typewriter-box {
+    display:none;
+    margin-bottom:8px;
+    padding:6px 14px;
+    background:rgba(0,10,5,0.82);
+    border:0.5px solid rgba(0,255,136,0.30);
+    border-radius:4px;
+    font-family:'Share Tech Mono',monospace;
+    font-size:11px;
+    letter-spacing:2px;
+    color:#00ff88;
+    white-space:nowrap;
+    text-align:center;
+}
+.tw-cursor {
+    animation:blink 0.7s infinite;
+    color:#00ff88;
+}
+
+
+
+
     </style>
 </head>
 <body>
@@ -146,23 +170,25 @@
     </div>
 
     <div class="content-overlay">
+        <div id="typewriter-box">
+            <span id="typewriter-text"></span><span class="tw-cursor">█</span>
+        </div>
         <div class="cockpit">
             <div class="row-sub">
-                <div class="btn-sm"><span class="slbl">↺ RST</span></div>
+                <div class="btn-sm" data-tw="Chúng tôi là ai · Tiến Thắng Center"><span class="slbl">GIỚI THIỆU</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm blue"><span class="slbl">⬡ D·1</span></div>
+                <div class="btn-sm blue" data-tw="Cam kết chất lượng · Sửa chữa tận tâm"><span class="slbl">SỨ MỆNH</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm blue"><span class="slbl">⬡ D·2</span></div>
+                <div class="btn-sm blue" data-tw="STM32 · ARM · Embedded Systems"><span class="slbl">CÔNG NGHỆ</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm yel"><span class="slbl">▦ RPT</span></div>
+                <div class="btn-sm yel" data-tw="IoT · AI · Smart Electronics 2025"><span class="slbl">XU HƯỚNG</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm"><span class="slbl">◉ OVR</span></div>
+                <div class="btn-sm" data-tw="Máy đo · Oscilloscope · Rework Station"><span class="slbl">THIẾT BỊ</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm pur"><span class="slbl">⊕ PIN</span></div>
+                <div class="btn-sm pur" data-tw="Cam kết bảo hành · Đổi trả linh kiện"><span class="slbl">BẢO HÀNH</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm red"><span class="slbl">⊘ LCK</span></div>
+                <div class="btn-sm red" data-tw="Quản lý · Điều phối · Drone Control v2"><span class="slbl">HỆ THỐNG</span></div>
             </div>
-            
         </div>
     </div>
 </div>
@@ -631,6 +657,46 @@ function loop(){
     requestAnimationFrame(loop);
 }
 loop();
+
+
+/* ── Typewriter tooltip ── */
+const twBox = document.getElementById('typewriter-box');
+const twText = document.getElementById('typewriter-text');
+let twTimer = null;
+let twIndex = 0;
+let twStr = '';
+
+function startTypewriter(str) {
+    clearInterval(twTimer);
+    twStr = str;
+    twIndex = 0;
+    twText.textContent = '';
+    twBox.style.display = 'block';
+    twTimer = setInterval(() => {
+        if (twIndex < twStr.length) {
+            twText.textContent += twStr[twIndex];
+            twIndex++;
+        } else {
+            clearInterval(twTimer);
+        }
+    }, 45);
+}
+
+function stopTypewriter() {
+    clearInterval(twTimer);
+    twText.textContent = '';
+    twBox.style.display = 'none';
+}
+
+document.querySelectorAll('.btn-sm[data-tw]').forEach(btn => {
+    btn.addEventListener('mouseenter', () => startTypewriter(btn.dataset.tw));
+    btn.addEventListener('mouseleave', stopTypewriter);
+});
+
+
+
+
+
 </script>
 </body>
 </html>

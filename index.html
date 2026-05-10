@@ -8,10 +8,11 @@
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body, html {
-            height:100%; background:#000;
-            overflow:hidden; cursor:crosshair;
-        }
-        .banner-container {
+                height:100%; background:#000;
+                overflow:hidden;
+                cursor: url('vom-probe.png') 0 32, crosshair;
+            }
+                    .banner-container {
             position:relative; width:100%; height:100vh;
             overflow:hidden; display:flex;
             align-items:center; justify-content:center;
@@ -40,8 +41,8 @@
             border:1px solid rgba(0,255,136,0.22);
             padding:10px 14px;
         }
-        .hud-tl { top:18px; left:18px; color:#00ff88; }
-        .hud-tr { top:18px; right:18px; color:#00ccff; text-align:right; }
+        .hud-tl { bottom:18px; left:18px; color:#00ff88; }
+        .hud-tr { bottom:18px; right:18px; color:#00ccff; text-align:right; }
         .hud .muted { color:rgba(255,255,255,0.38); font-size:10px; }
         .hud .ok   { color:#00ff88; }
         .hud .warn { color:#ffcc00; }
@@ -64,6 +65,56 @@
             color:#00ccff; text-shadow:0 0 10px rgba(0,204,255,0.6);
             margin-top:5px;
         }
+
+        .cockpit{
+    display:inline-flex;flex-direction:column;align-items:center;
+    gap:7px;padding:12px 16px 10px;
+    font-family:'Share Tech Mono',monospace;
+}
+.sys-label{font-size:7px;letter-spacing:3px;color:rgba(0,255,136,0.35);text-transform:uppercase;margin-bottom:1px}
+.row-main{display:flex;gap:5px;align-items:center}
+.btn-big{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;width: 93px;height:75px;
+    background:rgba(0,15,8,0.88);border:0.5px solid rgba(0,255,136,0.25);
+    border-radius:5px;cursor:pointer;
+    transition:background .10s,border-color .10s,transform .07s;position:relative;
+}
+.btn-big::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:rgba(0,255,136,0.12);border-radius:5px 5px 0 0}
+.btn-big:hover{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.70);transform:translateY(-1px)}
+.btn-big:active{transform:scale(0.95);background:rgba(0,255,136,0.14)}
+.btn-big .bico{font-size:22px;color:#00ff88;line-height:1}
+.btn-big .blbl{font-size:11px;letter-spacing:1.8px;color:#00ff88;text-transform:uppercase}
+.btn-big .bsub{font-size:9px;letter-spacing:.3px;color:rgba(0,255,136,0.38);margin-top:1px}
+.btn-big.red{border-color:rgba(248,113,113,0.25)}.btn-big.red::after{background:rgba(248,113,113,0.10)}
+.btn-big.red .bico,.btn-big.red .blbl{color:#f87171}.btn-big.red .bsub{color:rgba(248,113,113,0.38)}
+.btn-big.red:hover{background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.75)}
+.btn-big.blue{border-color:rgba(96,165,250,0.25)}.btn-big.blue::after{background:rgba(96,165,250,0.10)}
+.btn-big.blue .bico,.btn-big.blue .blbl{color:#60a5fa}.btn-big.blue .bsub{color:rgba(96,165,250,0.38)}
+.btn-big.blue:hover{background:rgba(96,165,250,0.08);border-color:rgba(96,165,250,0.75)}
+.vsep{width:0.5px;height:54px;background:rgba(0,255,136,0.10);margin:0 1px}
+.row-sub{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
+.btn-sm{
+    display:flex;align-items:center;gap:3px;padding:4px 10px;height:30px;
+    background:rgba(0,10,5,0.80);border:0.5px solid rgba(0,255,136,0.16);
+    border-radius:3px;cursor:pointer;
+    transition:background .10s,border-color .10s,transform .07s;white-space:nowrap;
+}
+.btn-sm:hover{background:rgba(0,255,136,0.07);border-color:rgba(0,255,136,0.55)}
+.btn-sm:active{transform:scale(0.95)}
+.btn-sm .slbl{font-size:10px;letter-spacing:1.2px;color:rgba(0,255,136,0.62);text-transform:uppercase;font-family:'Share Tech Mono',monospace}
+.btn-sm.red .slbl{color:rgba(248,113,113,0.75)}.btn-sm.red{border-color:rgba(248,113,113,0.16)}
+.btn-sm.red:hover{background:rgba(248,113,113,0.07);border-color:rgba(248,113,113,0.55)}
+.btn-sm.blue .slbl{color:rgba(96,165,250,0.75)}.btn-sm.blue{border-color:rgba(96,165,250,0.16)}
+.btn-sm.blue:hover{background:rgba(96,165,250,0.07);border-color:rgba(96,165,250,0.55)}
+.btn-sm.yel .slbl{color:rgba(251,191,36,0.75)}.btn-sm.yel{border-color:rgba(251,191,36,0.16)}
+.btn-sm.yel:hover{background:rgba(251,191,36,0.07);border-color:rgba(251,191,36,0.55)}
+.btn-sm.pur .slbl{color:rgba(192,132,252,0.75)}.btn-sm.pur{border-color:rgba(192,132,252,0.16)}
+.btn-sm.pur:hover{background:rgba(192,132,252,0.07);border-color:rgba(192,132,252,0.55)}
+.dot{width:3px;height:3px;border-radius:50%;background:rgba(0,255,136,0.18);flex-shrink:0}
+@keyframes blink{0%,100%{opacity:.7}50%{opacity:.15}} 
+
+
     </style>
 </head>
 <body>
@@ -91,11 +142,28 @@
         <div style="margin-top:5px"><span class="muted">SCANNED </span><span style="color:#00ccff" id="cnt-all">0</span></div>
         <div><span class="muted">OK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span id="cnt-ok" class="ok">0</span></div>
         <div><span class="muted">FAULT &nbsp;&nbsp;</span><span id="cnt-warn" class="warn">0</span></div>
+        <div>&nbsp;</div>
     </div>
 
     <div class="content-overlay">
-        <h1>STM32 CORE</h1>
-        <p>High-End Electronics Repair &amp; Development &nbsp;·&nbsp; Tiến Thắng Center</p>
+        <div class="cockpit">
+            <div class="row-sub">
+                <div class="btn-sm"><span class="slbl">↺ RST</span></div>
+                <div class="dot"></div>
+                <div class="btn-sm blue"><span class="slbl">⬡ D·1</span></div>
+                <div class="dot"></div>
+                <div class="btn-sm blue"><span class="slbl">⬡ D·2</span></div>
+                <div class="dot"></div>
+                <div class="btn-sm yel"><span class="slbl">▦ RPT</span></div>
+                <div class="dot"></div>
+                <div class="btn-sm"><span class="slbl">◉ OVR</span></div>
+                <div class="dot"></div>
+                <div class="btn-sm pur"><span class="slbl">⊕ PIN</span></div>
+                <div class="dot"></div>
+                <div class="btn-sm red"><span class="slbl">⊘ LCK</span></div>
+            </div>
+            
+        </div>
     </div>
 </div>
 
@@ -117,10 +185,10 @@ const W=()=>canvas.width, H=()=>canvas.height;
 
 const COMPS=[
     /* ── ICs & Processors ── */
-    {x:0.47,y:0.43,name:'STM32F407', type:'IC',    col:'#c084fc'},
-    {x:0.63,y:0.62,name:'74HC16SD',  type:'IC',    col:'#c084fc'},
+    {x:0.42,y:0.43,name:'STM32F407', type:'IC',    col:'#c084fc'},
+    {x:0.55,y:0.70,name:'74HC16SD',  type:'IC',    col:'#c084fc'},
     {x:0.68,y:0.73,name:'LM35S',     type:'IC',    col:'#c084fc'},
-    {x:0.73,y:0.39,name:'AT24C02',   type:'EEPROM',col:'#e879f9'},
+    {x:0.69,y:0.48,name:'AT24C02',   type:'EEPROM',col:'#e879f9'},
     {x:0.55,y:0.52,name:'74HCT16SD', type:'IC',    col:'#c084fc'},
     {x:0.60,y:0.35,name:'MC74HC08A', type:'IC',    col:'#c084fc'},
 
@@ -145,29 +213,35 @@ const COMPS=[
     {x:0.15,y:0.43,name:'INDUCTOR',  type:'COIL',  col:'#fbbf24'},
     {x:0.22,y:0.38,name:'COIL_L2',   type:'COIL',  col:'#fbbf24'},
     {x:0.11,y:0.55,name:'COIL_L3',   type:'COIL',  col:'#fbbf24'},
+    {x:0.83,y:0.70,name:'INDUCTOR',   type:'COIL',  col:'#fbbf24'},
 
     /* ── Resistors ── */
-    {x:0.50,y:0.82,name:'RES_220Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.44,y:0.82,name:'RES_220Ω',  type:'RES',   col:'#60a5fa'},
     {x:0.30,y:0.72,name:'RES_470Ω',  type:'RES',   col:'#60a5fa'},
-    {x:0.44,y:0.75,name:'RES_1kΩ',   type:'RES',   col:'#60a5fa'},
+    {x:0.39,y:0.75,name:'RES_1kΩ',   type:'RES',   col:'#60a5fa'},
     {x:0.36,y:0.85,name:'RES_10kΩ',  type:'RES',   col:'#60a5fa'},
-    {x:0.55,y:0.70,name:'RES_4k7Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.62,y:0.80,name:'RES_4k7Ω',  type:'RES',   col:'#60a5fa'},
     {x:0.22,y:0.80,name:'RES_100Ω',  type:'RES',   col:'#60a5fa'},
     {x:0.75,y:0.80,name:'RES_0Ω',    type:'RES',   col:'#60a5fa'},
+    {x:0.26,y:0.61,name:'RES_0Ω',    type:'RES',   col:'#60a5fa'},
 
     /* ── LEDs ── */
     {x:0.38,y:0.27,name:'LED_RED',   type:'LED',   col:'#f87171'},
-    {x:0.57,y:0.22,name:'LED_GRN',   type:'LED',   col:'#4ade80'},
-    {x:0.33,y:0.18,name:'LED_YLW',   type:'LED',   col:'#fde047'},
+    {x:0.72,y:0.235,name:'LED_YLW',  type:'LED',   col:'#FFFF00'},
+    {x:0.29,y:0.18,name:'LED_GRN',   type:'LED',   col:'#00FF00'},
+    {x:0.22,y:0.18,name:'LED_YLW',   type:'LED',   col:'#fde047'},
     {x:0.65,y:0.18,name:'LED_BLU',   type:'LED',   col:'#60a5fa'},
-    {x:0.10,y:0.70,name:'LED_RED2',  type:'LED',   col:'#f87171'},
-    {x:0.20,y:0.65,name:'LED_GRN2',  type:'LED',   col:'#4ade80'},
+    {x:0.13,y:0.70,name:'LED_FUSE',  type:'LED',   col:'#f87171'},
+    {x:0.32,y:0.99,name:'LED_YLW2',  type:'LED',   col:'#FFFF00'},
+    {x:0.01,y:0.90,name:'LED_GRN',   type:'LED',    col:'#00FF00'},
+    {x:0.11,y:0.35,name:'LED_RED',   type:'LED',    col:'#f87171'},
+    {x:0.89,y:0.92,name:'LED_RED',     type:'LED',    col:'#FF0000'},
 
     /* ── Diodes & Crystals ── */
-    {x:0.20,y:0.58,name:'DIODE_D1',  type:'DIODE', col:'#fb923c'},
-    {x:0.28,y:0.48,name:'DIODE_D2',  type:'DIODE', col:'#fb923c'},
+    {x:0.27,y:0.53,name:'DIODE_D1',  type:'DIODE', col:'#fb923c'},
+    {x:0.19,y:0.49,name:'DIODE_D2',  type:'DIODE', col:'#fb923c'},
     {x:0.42,y:0.60,name:'CRYSTAL',   type:'XTAL',  col:'#a5f3fc'},
-    {x:0.52,y:0.30,name:'XTAL_8MHz', type:'XTAL',  col:'#a5f3fc'},
+    {x:0.480,y:0.30,name:'XTAL_8MHz', type:'XTAL',  col:'#a5f3fc'},
 ];
 
 /* ── Readings ── */
@@ -390,7 +464,7 @@ class Drone {
         ctx.fillStyle=this.accentCol+'dd';
         ctx.font=`bold ${sc*0.21}px monospace`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('D'+(this.id+1),0,-sc*0.11);
+        ctx.fillText('Dr-0'+(this.id+1),0,-sc*0.11);
 
         /* Outer aura glow */
         const aura=ctx.createRadialGradient(0,0,sc*0.35,0,0,sc*1.15);

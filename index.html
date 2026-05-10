@@ -115,24 +115,59 @@ function resize(){ canvas.width=wrap.clientWidth; canvas.height=wrap.clientHeigh
 resize(); window.addEventListener('resize',resize);
 const W=()=>canvas.width, H=()=>canvas.height;
 
-/* ── Components ── */
 const COMPS=[
+    /* ── ICs & Processors ── */
     {x:0.47,y:0.43,name:'STM32F407', type:'IC',    col:'#c084fc'},
     {x:0.63,y:0.62,name:'74HC16SD',  type:'IC',    col:'#c084fc'},
     {x:0.68,y:0.73,name:'LM35S',     type:'IC',    col:'#c084fc'},
     {x:0.73,y:0.39,name:'AT24C02',   type:'EEPROM',col:'#e879f9'},
-    {x:0.15,y:0.43,name:'INDUCTOR',  type:'COIL',  col:'#fbbf24'},
-    {x:0.08,y:0.20,name:'CAP_470uF', type:'CAP',   col:'#34d399'},
-    {x:0.25,y:0.10,name:'CAP_220uF', type:'CAP',   col:'#34d399'},
-    {x:0.79,y:0.17,name:'CAP_100uF', type:'CAP',   col:'#34d399'},
+    {x:0.55,y:0.52,name:'74HCT16SD', type:'IC',    col:'#c084fc'},
+    {x:0.60,y:0.35,name:'MC74HC08A', type:'IC',    col:'#c084fc'},
+
+    /* ── FETs & Power ── */
     {x:0.88,y:0.48,name:'IRFZ44N',   type:'FET',   col:'#f87171'},
     {x:0.91,y:0.28,name:'IRFZ44N_2', type:'FET',   col:'#f87171'},
+    {x:0.84,y:0.36,name:'IRFZ44N_3', type:'FET',   col:'#f87171'},
+    {x:0.94,y:0.62,name:'FET_Q4',    type:'FET',   col:'#f87171'},
+
+    /* ── Capacitors ── */
+    {x:0.08,y:0.20,name:'CAP_470uF', type:'CAP',   col:'#34d399'},
+    {x:0.14,y:0.12,name:'CAP_220uF', type:'CAP',   col:'#34d399'},
+    {x:0.25,y:0.10,name:'CAP_220uF2',type:'CAP',   col:'#34d399'},
+    {x:0.79,y:0.17,name:'CAP_100uF', type:'CAP',   col:'#34d399'},
+    {x:0.86,y:0.10,name:'CAP_100uF2',type:'CAP',   col:'#34d399'},
+    {x:0.05,y:0.38,name:'CAP_47uF',  type:'CAP',   col:'#34d399'},
+    {x:0.38,y:0.08,name:'CAP_10uF',  type:'CAP',   col:'#34d399'},
+    {x:0.70,y:0.08,name:'CAP_10uF2', type:'CAP',   col:'#34d399'},
+    {x:0.92,y:0.78,name:'CAP_1000uF',type:'CAP',   col:'#34d399'},
+
+    /* ── Inductors & Coils ── */
+    {x:0.15,y:0.43,name:'INDUCTOR',  type:'COIL',  col:'#fbbf24'},
+    {x:0.22,y:0.38,name:'COIL_L2',   type:'COIL',  col:'#fbbf24'},
+    {x:0.11,y:0.55,name:'COIL_L3',   type:'COIL',  col:'#fbbf24'},
+
+    /* ── Resistors ── */
     {x:0.50,y:0.82,name:'RES_220Ω',  type:'RES',   col:'#60a5fa'},
     {x:0.30,y:0.72,name:'RES_470Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.44,y:0.75,name:'RES_1kΩ',   type:'RES',   col:'#60a5fa'},
+    {x:0.36,y:0.85,name:'RES_10kΩ',  type:'RES',   col:'#60a5fa'},
+    {x:0.55,y:0.70,name:'RES_4k7Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.22,y:0.80,name:'RES_100Ω',  type:'RES',   col:'#60a5fa'},
+    {x:0.75,y:0.80,name:'RES_0Ω',    type:'RES',   col:'#60a5fa'},
+
+    /* ── LEDs ── */
     {x:0.38,y:0.27,name:'LED_RED',   type:'LED',   col:'#f87171'},
     {x:0.57,y:0.22,name:'LED_GRN',   type:'LED',   col:'#4ade80'},
+    {x:0.33,y:0.18,name:'LED_YLW',   type:'LED',   col:'#fde047'},
+    {x:0.65,y:0.18,name:'LED_BLU',   type:'LED',   col:'#60a5fa'},
+    {x:0.10,y:0.70,name:'LED_RED2',  type:'LED',   col:'#f87171'},
+    {x:0.20,y:0.65,name:'LED_GRN2',  type:'LED',   col:'#4ade80'},
+
+    /* ── Diodes & Crystals ── */
     {x:0.20,y:0.58,name:'DIODE_D1',  type:'DIODE', col:'#fb923c'},
+    {x:0.28,y:0.48,name:'DIODE_D2',  type:'DIODE', col:'#fb923c'},
     {x:0.42,y:0.60,name:'CRYSTAL',   type:'XTAL',  col:'#a5f3fc'},
+    {x:0.52,y:0.30,name:'XTAL_8MHz', type:'XTAL',  col:'#a5f3fc'},
 ];
 
 /* ── Readings ── */
@@ -383,25 +418,9 @@ class Drone {
     }
 }
 
-/* ── Dot markers ── */
+/* ── Dot markers (invisible — chỉ dùng nội bộ cho drone targeting) ── */
 function drawDots(){
-    COMPS.forEach(c=>{
-        const px=c.x*W(),py=c.y*H(),sc=Math.min(W(),H())*0.010;
-        const pulse=Math.sin(performance.now()*0.0016+c.x*10)*0.5+0.5;
-        ctx.beginPath(); ctx.arc(px,py,sc*(1+pulse),0,Math.PI*2);
-        ctx.strokeStyle=c.col+'33'; ctx.lineWidth=1; ctx.stroke();
-        ctx.beginPath(); ctx.arc(px,py,sc*0.4,0,Math.PI*2);
-        ctx.fillStyle=c.col+'77'; ctx.fill();
-        ctx.fillStyle=c.col+'aa'; ctx.font='8px monospace'; ctx.textAlign='center';
-        ctx.fillText(c.name,px,py-sc-3);
-    });
-}
-
-/* ── Sweep line ── */
-function drawSweep(){
-    const t=(performance.now()/5000)%1;
-    ctx.fillStyle='rgba(0,255,136,0.022)';
-    ctx.fillRect(0,t*H()-40,W(),80);
+    /* Ẩn hoàn toàn — tọa độ vẫn tồn tại cho drones */
 }
 
 /* ── Clock ── */
@@ -430,7 +449,7 @@ const drones=[
 /* ── Loop ── */
 function loop(){
     ctx.clearRect(0,0,W(),H());
-    drawSweep(); drawDots();
+    drawDots();
     drones.forEach(d=>{ d.update(); updateStatus(d); d.draw(); });
     updateClock();
     requestAnimationFrame(loop);

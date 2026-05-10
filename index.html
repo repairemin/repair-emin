@@ -51,7 +51,7 @@
         .c-bl{bottom:8px;left:8px;transform:scaleY(-1)} .c-br{bottom:8px;right:8px;transform:scale(-1,-1)}
         .content-overlay {
             position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
-            z-index:10; text-align:center; pointer-events:none; white-space:nowrap;
+            z-index:10; text-align:center; pointer-events:auto; white-space:nowrap;
         }
         h1 {
             font-family:'Orbitron',sans-serif; font-weight:900;
@@ -67,7 +67,7 @@
         }
 
         .cockpit{
-    display:inline-flex;flex-direction:column;align-items:center;
+    display:inline-flex;flex-direction:column;align-items:stretch;
     gap:7px;padding:12px 16px 10px;
     font-family:'Share Tech Mono',monospace;
 }
@@ -119,6 +119,7 @@
 
 #typewriter-box {
     display:none;
+    width: 100%;
     margin-bottom:8px;
     padding:6px 14px;
     background:rgba(0,10,5,0.82);
@@ -128,8 +129,9 @@
     font-size:11px;
     letter-spacing:2px;
     color:#00ff88;
+    overflow:hidden;
     white-space:nowrap;
-    text-align:center;
+    text-align:left;
 }
 .tw-cursor {
     animation:blink 0.7s infinite;
@@ -170,24 +172,24 @@
     </div>
 
     <div class="content-overlay">
-        <div id="typewriter-box">
-            <span id="typewriter-text"></span><span class="tw-cursor">█</span>
-        </div>
         <div class="cockpit">
+            <div id="typewriter-box">
+                <span id="typewriter-text"></span><span class="tw-cursor">█</span>
+            </div>
             <div class="row-sub">
-                <div class="btn-sm" data-tw="Chúng tôi là ai · Tiến Thắng Center"><span class="slbl">GIỚI THIỆU</span></div>
+                <div class="btn-sm" data-tw="Chúng tôi đến từ phòng Lab kỹ thuật của công ty Emin Việt Nam"><span class="slbl">GIỚI THIỆU</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm blue" data-tw="Cam kết chất lượng · Sửa chữa tận tâm"><span class="slbl">SỨ MỆNH</span></div>
+                <div class="btn-sm blue" data-tw="Trở thành người bạn đồng hành tin cậy, bảo vệ hiệu suất tối ưu cho hệ thống thiết bị của doanh nghiệp, tổ chức và cá nhân"><span class="slbl">SỨ MỆNH</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm blue" data-tw="STM32 · ARM · Embedded Systems"><span class="slbl">CÔNG NGHỆ</span></div>
+                <div class="btn-sm blue" data-tw="STM32 · ARM · Embedded Systems · · ·"><span class="slbl">CÔNG NGHỆ</span></div>
                 <div class="dot"></div>
                 <div class="btn-sm yel" data-tw="IoT · AI · Smart Electronics 2025"><span class="slbl">XU HƯỚNG</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm" data-tw="Máy đo · Oscilloscope · Rework Station"><span class="slbl">THIẾT BỊ</span></div>
+                <div class="btn-sm" data-tw="Mechanical & Dimensional · Oscilloscope · Rework Station · Electrical & Electronic · Temperature & Humidity · Pressure & Flow · Environmental & Acoustic · Mass & Weight"><span class="slbl">THIẾT BỊ</span></div>
                 <div class="dot"></div>
                 <div class="btn-sm pur" data-tw="Cam kết bảo hành · Đổi trả linh kiện"><span class="slbl">BẢO HÀNH</span></div>
                 <div class="dot"></div>
-                <div class="btn-sm red" data-tw="Quản lý · Điều phối · Drone Control v2"><span class="slbl">HỆ THỐNG</span></div>
+                <div class="btn-sm red" data-tw="Quản lý · Điều phối · Drone Control"><span class="slbl">HỆ THỐNG</span></div>
             </div>
         </div>
     </div>
@@ -647,6 +649,60 @@ function drawClickFX(){
     ctx.restore();
 }
 
+
+/* ── Typewriter tooltip ── */
+const twBox = document.getElementById('typewriter-box');
+const twText = document.getElementById('typewriter-text');
+let twTimer = null;
+let twIndex = 0;
+let twStr = '';
+const TW_MAX_CHARS = 28; /* số ký tự tối đa hiển thị trong khung */
+
+function startTypewriter(str) {
+    clearInterval(twTimer);
+    twStr = str;
+    twIndex = 0;
+    twText.textContent = '';
+    twBox.style.display = 'block';
+
+    /* Tính số ký tự vừa khung dựa theo width thực tế */
+    const charWidth = 8.5; /* px mỗi ký tự font mono 11px letter-spacing:2px */
+    const boxWidth = twBox.clientWidth - 28; /* trừ padding 14px*2 */
+    const TW_MAX_CHARS = Math.floor(boxWidth / charWidth);
+
+    twTimer = setInterval(() => {
+        if (twIndex < twStr.length) {
+            twText.textContent += twStr[twIndex];
+            twIndex++;
+            /* chỉ cuộn khi đã vượt quá chiều dài khung */
+            if (twText.textContent.length > TW_MAX_CHARS) {
+                twText.textContent = twText.textContent.slice(
+                    twText.textContent.length - TW_MAX_CHARS
+                );
+            }
+        } else {
+            clearInterval(twTimer);
+        }
+    }, 120);
+}
+function stopTypewriter() {
+    clearInterval(twTimer);
+    twText.textContent = '';
+    twBox.style.display = 'none';
+}
+
+document.querySelectorAll('.btn-sm[data-tw]').forEach(btn => {
+    btn.addEventListener('mouseenter', () => startTypewriter(btn.dataset.tw));
+    btn.addEventListener('mouseleave', stopTypewriter);
+});
+
+
+
+
+
+
+
+
 /* ── Loop ── */
 function loop(){
     ctx.clearRect(0,0,W(),H());
@@ -658,40 +714,6 @@ function loop(){
 }
 loop();
 
-
-/* ── Typewriter tooltip ── */
-const twBox = document.getElementById('typewriter-box');
-const twText = document.getElementById('typewriter-text');
-let twTimer = null;
-let twIndex = 0;
-let twStr = '';
-
-function startTypewriter(str) {
-    clearInterval(twTimer);
-    twStr = str;
-    twIndex = 0;
-    twText.textContent = '';
-    twBox.style.display = 'block';
-    twTimer = setInterval(() => {
-        if (twIndex < twStr.length) {
-            twText.textContent += twStr[twIndex];
-            twIndex++;
-        } else {
-            clearInterval(twTimer);
-        }
-    }, 45);
-}
-
-function stopTypewriter() {
-    clearInterval(twTimer);
-    twText.textContent = '';
-    twBox.style.display = 'none';
-}
-
-document.querySelectorAll('.btn-sm[data-tw]').forEach(btn => {
-    btn.addEventListener('mouseenter', () => startTypewriter(btn.dataset.tw));
-    btn.addEventListener('mouseleave', stopTypewriter);
-});
 
 
 

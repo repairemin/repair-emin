@@ -207,6 +207,16 @@ class Drone {
 
     pickNext(){
         const c=COMPS[~~(Math.random()*COMPS.length)];
+        this._flyTo(c);
+    }
+
+    /* Dispatch tới component cụ thể (khi user click) */
+    dispatchTo(c){
+        this._flyTo(c);
+        this.manualOverride=true;
+    }
+
+    _flyTo(c){
         const nx=c.x*W();
         const ny=c.y*H()-H()*0.13;
         this.sx=this.x; this.sy=this.y;
@@ -215,6 +225,7 @@ class Drone {
         const dist=Math.hypot(nx-this.x,ny-this.y);
         this.flightDur=Math.max(80,dist*0.16);
         this.target=c; this.state='flying'; this.beamAlpha=0;
+        this.manualOverride=false;
     }
 
     update(){
@@ -446,10 +457,101 @@ const drones=[
     new Drone(1,'#00aaff','#aaccff',0.72,0.28),
 ];
 
+/* ── Click to dispatch drone ── */
+const CLICK_RADIUS = 85; /* px bán kính tìm linh kiện quanh điểm click */
+let noTargetFlash = null; /* hiệu ứng khi click chỗ trống */
+
+wrap.addEventListener('click', e=>{
+    const rect = wrap.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    /* Tìm linh kiện gần nhất trong bán kính */
+    let best = null, bestDist = CLICK_RADIUS;
+    COMPS.forEach(c=>{
+        const cx = c.x * W(), cy = c.y * H();
+        const d = Math.hypot(mx - cx, my - cy);
+        if(d < bestDist){ bestDist = d; best = c; }
+    });
+
+    if(best){
+        /* Chọn drone phù hợp nhất:
+           ưu tiên drone đang scanning (rảnh hơn drone đang bay dài)
+           nếu cả 2 đang flying thì chọn drone gần target hơn */
+        let chosen;
+        const flying  = drones.filter(d => d.state === 'flying');
+        const scanning = drones.filter(d => d.state === 'scanning');
+
+        if(scanning.length > 0){
+            /* lấy drone scanning gần vị trí click nhất */
+            chosen = scanning.reduce((a,b)=>
+                Math.hypot(a.x - mx, a.y - my) < Math.hypot(b.x - mx, b.y - my) ? a : b
+            );
+        } else {
+            /* cả 2 đang bay → lấy cái gần điểm click hơn */
+            chosen = flying.reduce((a,b)=>
+                Math.hypot(a.x - mx, a.y - my) < Math.hypot(b.x - mx, b.y - my) ? a : b
+            );
+        }
+
+        chosen.dispatchTo(best);
+
+        /* Hiệu ứng ripple tại điểm click */
+        noTargetFlash = { x: mx, y: my, t: 0, col: best.col, label: best.name, found: true };
+    } else {
+        /* Click chỗ trống — flash đỏ "NO TARGET" */
+        noTargetFlash = { x: mx, y: my, t: 0, col: '#ff4444', label: 'NO TARGET', found: false };
+    }
+});
+
+/* Vẽ hiệu ứng ripple tại điểm click */
+function drawClickFX(){
+    if(!noTargetFlash) return;
+    const f = noTargetFlash;
+    f.t++;
+    const prog = f.t / 55;
+    if(prog >= 1){ noTargetFlash = null; return; }
+
+    const alpha = 1 - prog;
+
+    /* Ripple vòng tròn lan ra */
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 8 + prog * 44, 0, Math.PI * 2);
+    ctx.strokeStyle = f.col + Math.round(alpha * 200).toString(16).padStart(2,'0');
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    /* Vòng thứ 2 nhỏ hơn */
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 4 + prog * 22, 0, Math.PI * 2);
+    ctx.strokeStyle = f.col + Math.round(alpha * 130).toString(16).padStart(2,'0');
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    /* Label nổi lên */
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 11px monospace';
+    const tw = ctx.measureText(f.label).width + 18;
+    const ty = f.y - 18 - prog * 20;
+    ctx.fillStyle = 'rgba(0,6,3,0.85)';
+    ctx.strokeStyle = f.col;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(f.x - tw/2, ty - 11, tw, 22, 4);
+    else ctx.rect(f.x - tw/2, ty - 11, tw, 22);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = f.col;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(f.label, f.x, ty);
+    ctx.restore();
+}
+
 /* ── Loop ── */
 function loop(){
     ctx.clearRect(0,0,W(),H());
     drawDots();
+    drawClickFX();
     drones.forEach(d=>{ d.update(); updateStatus(d); d.draw(); });
     updateClock();
     requestAnimationFrame(loop);

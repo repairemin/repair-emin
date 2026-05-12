@@ -2,727 +2,1404 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng kỹ thuật công ty EMiN ViỆT NAM</title>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@900&display=swap" rel="stylesheet">
-    <link rel="icon" href="favicon.ico">
+    <title>Hanoi High-Detail Simulation</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body, html {
-                height:100%; background:#000;
-                overflow:hidden;
-                cursor: url('vom-probe.png') 0 32, crosshair;
-            }
-                    .banner-container {
-            position:relative; width:100%; height:100vh;
-            overflow:hidden; display:flex;
-            align-items:center; justify-content:center;
+        body { margin: 0; overflow: hidden; background: #a5e1ff; }
+        #info {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(0,0,0,0.7); color: #00ffcc;
+            padding: 10px; font-family: monospace; border-left: 4px solid #fff;
         }
-        .pcb-background {
-            position:absolute; top:-2%; left:-2%;
-            width:104%; height:104%;
-            background-image:url('repair-emin.png');
-            background-size:cover; background-position:center;
-            filter:brightness(0.72) saturate(1.1);
-            z-index:1; transition:transform 0.15s ease-out;
-        }
-        .scanline-overlay {
-            position:absolute; inset:0; z-index:2; pointer-events:none;
-            background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.025) 3px,rgba(0,0,0,0.025) 4px);
-        }
-        #tech-canvas {
-            position:absolute; inset:0; width:100%; height:100%;
-            z-index:5; pointer-events:none;
-        }
-        .hud {
-            position:absolute; z-index:10;
-            font-family:'Share Tech Mono',monospace;
-            font-size:11px; line-height:2; pointer-events:none;
-            background:rgba(0,6,3,0.60);
-            border:1px solid rgba(0,255,136,0.22);
-            padding:10px 14px;
-        }
-        .hud-tl { bottom:18px; left:18px; color:#00ff88; }
-        .hud-tr { bottom:18px; right:18px; color:#00ccff; text-align:right; }
-        .hud .muted { color:rgba(255,255,255,0.38); font-size:10px; }
-        .hud .ok   { color:#00ff88; }
-        .hud .warn { color:#ffcc00; }
-        .corner { position:absolute; z-index:6; width:26px; height:26px; pointer-events:none; }
-        .c-tl{top:8px;left:8px} .c-tr{top:8px;right:8px;transform:scaleX(-1)}
-        .c-bl{bottom:8px;left:8px;transform:scaleY(-1)} .c-br{bottom:8px;right:8px;transform:scale(-1,-1)}
-        .content-overlay {
-            position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
-            z-index:10; text-align:center; pointer-events:auto; white-space:nowrap;
-        }
-        h1 {
-            font-family:'Orbitron',sans-serif; font-weight:900;
-            font-size:clamp(22px,4vw,52px); letter-spacing:10px;
-            text-transform:uppercase; color:#fff;
-            text-shadow:0 0 30px rgba(0,255,136,0.7),0 0 60px rgba(0,255,136,0.3);
-        }
-        .content-overlay p {
-            font-family:'Share Tech Mono',monospace;
-            font-size:clamp(9px,1vw,13px); letter-spacing:4px;
-            color:#00ccff; text-shadow:0 0 10px rgba(0,204,255,0.6);
-            margin-top:5px;
-        }
-
-        .cockpit{
-    display:inline-flex;flex-direction:column;align-items:stretch;
-    gap:7px;padding:12px 16px 10px;
-    font-family:'Share Tech Mono',monospace;
-}
-.sys-label{font-size:7px;letter-spacing:3px;color:rgba(0,255,136,0.35);text-transform:uppercase;margin-bottom:1px}
-.row-main{display:flex;gap:5px;align-items:center}
-.btn-big{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:2px;width: 93px;height:75px;
-    background:rgba(0,15,8,0.88);border:0.5px solid rgba(0,255,136,0.25);
-    border-radius:5px;cursor:pointer;
-    transition:background .10s,border-color .10s,transform .07s;position:relative;
-}
-.btn-big::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:rgba(0,255,136,0.12);border-radius:5px 5px 0 0}
-.btn-big:hover{background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.70);transform:translateY(-1px)}
-.btn-big:active{transform:scale(0.95);background:rgba(0,255,136,0.14)}
-.btn-big .bico{font-size:22px;color:#00ff88;line-height:1}
-.btn-big .blbl{font-size:11px;letter-spacing:1.8px;color:#00ff88;text-transform:uppercase}
-.btn-big .bsub{font-size:9px;letter-spacing:.3px;color:rgba(0,255,136,0.38);margin-top:1px}
-.btn-big.red{border-color:rgba(248,113,113,0.25)}.btn-big.red::after{background:rgba(248,113,113,0.10)}
-.btn-big.red .bico,.btn-big.red .blbl{color:#f87171}.btn-big.red .bsub{color:rgba(248,113,113,0.38)}
-.btn-big.red:hover{background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.75)}
-.btn-big.blue{border-color:rgba(96,165,250,0.25)}.btn-big.blue::after{background:rgba(96,165,250,0.10)}
-.btn-big.blue .bico,.btn-big.blue .blbl{color:#60a5fa}.btn-big.blue .bsub{color:rgba(96,165,250,0.38)}
-.btn-big.blue:hover{background:rgba(96,165,250,0.08);border-color:rgba(96,165,250,0.75)}
-.vsep{width:0.5px;height:54px;background:rgba(0,255,136,0.10);margin:0 1px}
-.row-sub{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}
-.btn-sm{
-    display:flex;align-items:center;gap:3px;padding:4px 10px;height:30px;
-    background:rgba(0,10,5,0.80);border:0.5px solid rgba(0,255,136,0.16);
-    border-radius:3px;cursor:pointer;
-    transition:background .10s,border-color .10s,transform .07s;white-space:nowrap;
-}
-.btn-sm:hover{background:rgba(0,255,136,0.07);border-color:rgba(0,255,136,0.55)}
-.btn-sm:active{transform:scale(0.95)}
-.btn-sm .slbl{font-size:10px;letter-spacing:1.2px;color:rgba(0,255,136,0.62);text-transform:uppercase;font-family:'Share Tech Mono',monospace}
-.btn-sm.red .slbl{color:rgba(248,113,113,0.75)}.btn-sm.red{border-color:rgba(248,113,113,0.16)}
-.btn-sm.red:hover{background:rgba(248,113,113,0.07);border-color:rgba(248,113,113,0.55)}
-.btn-sm.blue .slbl{color:rgba(96,165,250,0.75)}.btn-sm.blue{border-color:rgba(96,165,250,0.16)}
-.btn-sm.blue:hover{background:rgba(96,165,250,0.07);border-color:rgba(96,165,250,0.55)}
-.btn-sm.yel .slbl{color:rgba(251,191,36,0.75)}.btn-sm.yel{border-color:rgba(251,191,36,0.16)}
-.btn-sm.yel:hover{background:rgba(251,191,36,0.07);border-color:rgba(251,191,36,0.55)}
-.btn-sm.pur .slbl{color:rgba(192,132,252,0.75)}.btn-sm.pur{border-color:rgba(192,132,252,0.16)}
-.btn-sm.pur:hover{background:rgba(192,132,252,0.07);border-color:rgba(192,132,252,0.55)}
-.dot{width:3px;height:3px;border-radius:50%;background:rgba(0,255,136,0.18);flex-shrink:0}
-@keyframes blink{0%,100%{opacity:.7}50%{opacity:.15}} 
-
-
-
-
-#typewriter-box {
-    display:none;
-    width: 100%;
-    margin-bottom:8px;
-    padding:6px 14px;
-    background:rgba(0,10,5,0.82);
-    border:0.5px solid rgba(0,255,136,0.30);
-    border-radius:4px;
-    font-family:'Share Tech Mono',monospace;
-    font-size:11px;
-    letter-spacing:2px;
-    color:#00ff88;
-    overflow:hidden;
-    white-space:nowrap;
-    text-align:left;
-}
-.tw-cursor {
-    animation:blink 0.7s infinite;
-    color:#00ff88;
-}
-
-
-
-
     </style>
-
-
-    
 </head>
 <body>
-<div class="banner-container">
-    <div class="pcb-background" id="bgLayer"></div>
-    <div class="scanline-overlay"></div>
-    <canvas id="tech-canvas"></canvas>
+    <div id="info">LOCATION: HANOI_CITY | SCAN_MODE: HIGH_RES</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <div class="corner c-tl"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
-    <div class="corner c-tr"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
-    <div class="corner c-bl"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
-    <div class="corner c-br"><svg viewBox="0 0 26 26" fill="none"><polyline points="0,26 0,0 26,0" stroke="#00ff88" stroke-width="2"/></svg></div>
+    <script>
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xa5e1ff);
+        scene.fog = new THREE.FogExp2(0xa5e1ff, 0.001);
 
-    <div class="hud hud-tl">
-        <div>◈ DRONE-01 &nbsp;<span class="ok" id="t1-status">EN ROUTE</span></div>
-        <div><span class="muted">TARGET &nbsp;</span><span id="t1-target">STM32F407</span></div>
-        <div><span class="muted">MEASURE</span> <span id="t1-val">—</span></div>
-        <div style="margin-top:5px">◈ DRONE-02 &nbsp;<span class="ok" id="t2-status">EN ROUTE</span></div>
-        <div><span class="muted">TARGET &nbsp;</span><span id="t2-target">IRFZ44N</span></div>
-        <div><span class="muted">MEASURE</span> <span id="t2-val">—</span></div>
-    </div>
-    <div class="hud hud-tr">
-        <div>SYS &nbsp;<span class="ok">● ONLINE</span></div>
-        <div id="clock">00:00:00</div>
-        <div style="margin-top:5px"><span class="muted">SCANNED </span><span style="color:#00ccff" id="cnt-all">0</span></div>
-        <div><span class="muted">OK &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span id="cnt-ok" class="ok">0</span></div>
-        <div><span class="muted">FAULT &nbsp;&nbsp;</span><span id="cnt-warn" class="warn">0</span></div>
-        <div>&nbsp;</div>
-    </div>
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
 
-    <div class="content-overlay">
-        <div class="cockpit">
-            <div id="typewriter-box">
-                <span id="typewriter-text"></span><span class="tw-cursor">█</span>
-            </div>
-            <div class="row-sub">
-                <div class="btn-sm" data-tw="Đội ngũ kỹ thuật thuộc PKT,PBH,PHC của công ty Emin Việt Nam "><span class="slbl">GIỚI THIỆU</span></div>
-                <div class="dot"></div>
-                <div class="btn-sm blue" data-tw="Trở thành người đồng hành tin cậy, bảo vệ hiệu suất tối ưu cho hệ thống thiết bị của doanh nghiệp, tổ chức và cá nhân"><span class="slbl">SỨ MỆNH</span></div>
-                <div class="dot"></div>
-                <div class="btn-sm blue" data-tw="SP32 · ARM · Embedded Systems · Edge AI · Physical AI · Brain-Computer Interface ·  "><span class="slbl">CÔNG NGHỆ</span></div>
-                <div class="dot"></div>
-                <div class="btn-sm yel" data-tw="AIoT & 5G Advanced · Chip AI (NPU) tích hợp sâu · Pin Sodium & Pin không sạc (Batteryless)(Supercapacitor)"><span class="slbl">XU HƯỚNG</span></div>
-                <div class="dot"></div>
-                <div class="btn-sm" data-tw="Mechanical & Dimensional · Oscilloscope · Rework Station · Electrical & Electronic · Temperature & Humidity · Pressure & Flow · Environmental & Acoustic · Mass & Weight"><span class="slbl">THIẾT BỊ</span></div>
-                <div class="dot"></div>
-                <div class="btn-sm pur" data-tw="Cam kết bảo hành · Đổi trả linh kiện"><span class="slbl">BẢO HÀNH</span></div>
-                <div class="dot"></div>
-                <div class="btn-sm red" data-tw="Phòng Lab kỹ thuật trụ sở chính tại Hà nội, các CN:  Chi nhánh Bắc Ninh · Chi nhánh Hải Phòng · Chi nhánh Đà Nắng · Chi nhánh Đồng Nai · Chi nhánh Tp HCM · · ·"><span class="slbl">HỆ THỐNG</span></div>
-            </div>
-        </div>
-    </div>
-</div>
+        // Ánh sáng mặt trời mạnh hơn để làm rõ chi tiết
+        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(100, 500, 100);
+        scene.add(sun);
 
-<script>
-/* ── Parallax ── */
-const bg = document.getElementById('bgLayer');
-window.addEventListener('mousemove', e => {
-    const x=(window.innerWidth/2-e.pageX)/50, y=(window.innerHeight/2-e.pageY)/50;
-    bg.style.transform=`translateX(${x}px) translateY(${y}px)`;
-});
+        // --- HÀM VẼ ĐƯỜNG PHỐ CHI TIẾT (CANVAS TEXTURE) ---
+        function createRoadTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
 
-/* ── Canvas ── */
-const canvas=document.getElementById('tech-canvas');
-const ctx=canvas.getContext('2d');
-const wrap=document.querySelector('.banner-container');
-function resize(){ canvas.width=wrap.clientWidth; canvas.height=wrap.clientHeight; }
-resize(); window.addEventListener('resize',resize);
-const W=()=>canvas.width, H=()=>canvas.height;
+            // Nền nhựa đường xám đậm
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, 512, 512);
 
-const COMPS=[
-    /* ── ICs & Processors ── */
-    {x:0.42,y:0.43,name:'STM32F407', type:'IC',    col:'#c084fc'},
-    {x:0.55,y:0.70,name:'74HC16SD',  type:'IC',    col:'#c084fc'},
-    {x:0.68,y:0.73,name:'LM35S',     type:'IC',    col:'#c084fc'},
-    {x:0.69,y:0.48,name:'AT24C02',   type:'EEPROM',col:'#e879f9'},
-    {x:0.55,y:0.52,name:'74HCT16SD', type:'IC',    col:'#c084fc'},
-    {x:0.60,y:0.35,name:'MC74HC08A', type:'IC',    col:'#c084fc'},
+            // Vạch kẻ tim đường (đứt đoạn)
+            ctx.strokeStyle = '#ffffff';
+            ctx.setLineDash([20, 20]);
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(256, 0); ctx.lineTo(256, 512);
+            ctx.moveTo(0, 256); ctx.lineTo(512, 256);
+            ctx.stroke();
 
-    /* ── FETs & Power ── */
-    {x:0.88,y:0.48,name:'IRFZ44N',   type:'FET',   col:'#f87171'},
-    {x:0.91,y:0.28,name:'IRFZ44N_2', type:'FET',   col:'#f87171'},
-    {x:0.84,y:0.36,name:'IRFZ44N_3', type:'FET',   col:'#f87171'},
-    {x:0.94,y:0.62,name:'FET_Q4',    type:'FET',   col:'#f87171'},
-
-    /* ── Capacitors ── */
-    {x:0.08,y:0.20,name:'CAP_470uF', type:'CAP',   col:'#34d399'},
-    {x:0.14,y:0.12,name:'CAP_220uF', type:'CAP',   col:'#34d399'},
-    {x:0.25,y:0.10,name:'CAP_220uF2',type:'CAP',   col:'#34d399'},
-    {x:0.79,y:0.17,name:'CAP_100uF', type:'CAP',   col:'#34d399'},
-    {x:0.86,y:0.10,name:'CAP_100uF2',type:'CAP',   col:'#34d399'},
-    {x:0.05,y:0.38,name:'CAP_47uF',  type:'CAP',   col:'#34d399'},
-    {x:0.38,y:0.08,name:'CAP_10uF',  type:'CAP',   col:'#34d399'},
-    {x:0.70,y:0.08,name:'CAP_10uF2', type:'CAP',   col:'#34d399'},
-    {x:0.92,y:0.78,name:'CAP_1000uF',type:'CAP',   col:'#34d399'},
-
-    /* ── Inductors & Coils ── */
-    {x:0.15,y:0.43,name:'INDUCTOR',  type:'COIL',  col:'#fbbf24'},
-    {x:0.22,y:0.38,name:'COIL_L2',   type:'COIL',  col:'#fbbf24'},
-    {x:0.11,y:0.55,name:'COIL_L3',   type:'COIL',  col:'#fbbf24'},
-    {x:0.83,y:0.70,name:'INDUCTOR',   type:'COIL',  col:'#fbbf24'},
-
-    /* ── Resistors ── */
-    {x:0.44,y:0.82,name:'RES_220Ω',  type:'RES',   col:'#60a5fa'},
-    {x:0.30,y:0.72,name:'RES_470Ω',  type:'RES',   col:'#60a5fa'},
-    {x:0.39,y:0.75,name:'RES_1kΩ',   type:'RES',   col:'#60a5fa'},
-    {x:0.41,y:0.85,name:'RES_10kΩ',  type:'RES',   col:'#60a5fa'},
-    {x:0.62,y:0.80,name:'RES_4k7Ω',  type:'RES',   col:'#60a5fa'},
-    {x:0.22,y:0.80,name:'RES_100Ω',  type:'RES',   col:'#60a5fa'},
-    {x:0.75,y:0.80,name:'RES_0Ω',    type:'RES',   col:'#60a5fa'},
-    {x:0.26,y:0.61,name:'RES_0Ω',    type:'RES',   col:'#60a5fa'},
-
-    /* ── LEDs ── */
-    {x:0.38,y:0.27,name:'LED_RED',   type:'LED',   col:'#f87171'},
-    {x:0.72,y:0.235,name:'LED_YLW',  type:'LED',   col:'#FFFF00'},
-    {x:0.29,y:0.18,name:'LED_GRN',   type:'LED',   col:'#00FF00'},
-    {x:0.22,y:0.18,name:'LED_YLW',   type:'LED',   col:'#fde047'},
-    {x:0.65,y:0.18,name:'LED_BLU',   type:'LED',   col:'#60a5fa'},
-    {x:0.13,y:0.70,name:'LED_FUSE',  type:'LED',   col:'#f87171'},
-    {x:0.32,y:0.99,name:'LED_YLW2',  type:'LED',   col:'#FFFF00'},
-    {x:0.01,y:0.90,name:'LED_GRN',   type:'LED',    col:'#00FF00'},
-    {x:0.11,y:0.35,name:'LED_RED',   type:'LED',    col:'#f87171'},
-    {x:0.89,y:0.92,name:'LED_RED',     type:'LED',    col:'#FF0000'},
-
-    /* ── Diodes & Crystals ── */
-    {x:0.27,y:0.53,name:'DIODE_D1',  type:'DIODE', col:'#fb923c'},
-    {x:0.19,y:0.49,name:'DIODE_D2',  type:'DIODE', col:'#fb923c'},
-    {x:0.42,y:0.60,name:'CRYSTAL',   type:'XTAL',  col:'#a5f3fc'},
-    {x:0.480,y:0.30,name:'XTAL_8MHz', type:'XTAL',  col:'#a5f3fc'},
-];
-
-/* ── Readings ── */
-const READS={
-    IC:    ()=>({v:(3.1+Math.random()*0.5).toFixed(2)+'V', lbl:rp(88)?'OK':'WARN'}),
-    CAP:   ()=>({v:(~~(Math.random()*900+100))+'Ω',         lbl:rp(85)?'OK':'LEAK'}),
-    COIL:  ()=>({v:(~~(Math.random()*60+5))+'Ω',            lbl:'OK'}),
-    FET:   ()=>({v:(4.5+Math.random()).toFixed(1)+'V',       lbl:rp(80)?'OK':'GATE_ERR'}),
-    RES:   ()=>({v:(~~(Math.random()*800+100))+'Ω',          lbl:'OK'}),
-    EEPROM:()=>({v:'3.30V',lbl:'OK'}),
-    LED:   ()=>({v:(1.8+Math.random()*0.5).toFixed(2)+'V',  lbl:rp(82)?'OK':'FAIL'}),
-    DIODE: ()=>({v:(0.55+Math.random()*0.15).toFixed(2)+'V',lbl:'OK'}),
-    XTAL:  ()=>({v:'3.30V',lbl:rp(90)?'OK':'DRIFT'}),
-};
-function rp(p){return Math.random()*100<p;}
-let cntAll=0,cntOk=0,cntWarn=0;
-
-function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
-
-/* ══════════════ Drone class ══════════════ */
-class Drone {
-    constructor(id, accentCol, beamCol, sx, sy){
-        this.id=id; this.accentCol=accentCol; this.beamCol=beamCol;
-        this.x=sx*W(); this.y=sy*H();
-        this.sx=this.x; this.sy=this.y;
-        this.tx=this.x; this.ty=this.y;
-        this.tProg=1; this.flightDur=1;
-        this.hoverPhase=Math.random()*Math.PI*2;
-        this.enginePhase=0;
-        this.state='flying';
-        this.scanT=0; this.scanDur=0;
-        this.target=null;
-        this.beamAlpha=0;
-        this.popups=[]; this.rings=[];
-        this.pickNext();
-    }
-
-    pickNext(){
-        const c=COMPS[~~(Math.random()*COMPS.length)];
-        this._flyTo(c);
-    }
-
-    /* Dispatch tới component cụ thể (khi user click) */
-    dispatchTo(c){
-        this._flyTo(c);
-        this.manualOverride=true;
-    }
-
-    _flyTo(c){
-        const nx=c.x*W();
-        const ny=c.y*H()-H()*0.13;
-        this.sx=this.x; this.sy=this.y;
-        this.tx=nx; this.ty=ny;
-        this.tProg=0;
-        const dist=Math.hypot(nx-this.x,ny-this.y);
-        this.flightDur=Math.max(80,dist*0.16);
-        this.target=c; this.state='flying'; this.beamAlpha=0;
-        this.manualOverride=false;
-    }
-
-    update(){
-        this.hoverPhase+=0.032; this.enginePhase+=0.09;
-
-        if(this.state==='flying'){
-            this.tProg=Math.min(1,this.tProg+1/this.flightDur);
-            const t=easeInOut(this.tProg);
-            const arc=Math.sin(this.tProg*Math.PI)*(-H()*0.09);
-            this.x=this.sx+(this.tx-this.sx)*t;
-            this.y=this.sy+(this.ty-this.sy)*t+arc;
-            if(this.tProg>=1){
-                this.state='scanning';
-                this.scanDur=110+~~(Math.random()*70);
-                this.scanT=this.scanDur;
-                this.rings=[];
+            // Vạch đi bộ (Zebra crossing) tại ngã tư
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#ffffff';
+            for(let i=0; i<6; i++) {
+                ctx.fillRect(230 + i*8, 180, 4, 30); // Ngang
+                ctx.fillRect(180, 230 + i*8, 30, 4); // Dọc
             }
-        } else if(this.state==='scanning'){
-            this.x=this.tx+Math.sin(this.hoverPhase*0.6)*3.5;
-            this.y=this.ty+Math.sin(this.hoverPhase)*5;
-            this.beamAlpha=Math.min(1,this.beamAlpha+0.045);
-            this.scanT--;
-            if(this.scanT%16===0) this.rings.push({t:0,x:this.target.x*W(),y:this.target.y*H()});
-            if(this.scanT<=0){
-                const rd=(READS[this.target.type]||READS.IC)();
-                const isW=rd.lbl!=='OK';
-                this.popups.push({
-                    x:this.target.x*W(), y:this.target.y*H()-24,
-                    text:this.target.name+' → '+rd.lbl+' ['+rd.v+']',
-                    col:isW?'#ffcc00':'#00ff88', life:140
-                });
-                cntAll++; isW?cntWarn++:cntOk++;
-                document.getElementById('cnt-all').textContent=cntAll;
-                document.getElementById('cnt-ok').textContent=cntOk;
-                document.getElementById('cnt-warn').textContent=cntWarn;
-                const p=this.id===0?'t1':'t2';
-                document.getElementById(p+'-target').textContent=this.target.name;
-                document.getElementById(p+'-val').textContent=rd.v;
-                const el=document.getElementById(p+'-status');
-                el.textContent=rd.lbl; el.className=isW?'warn':'ok';
-                this.beamAlpha=0; this.pickNext();
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const roadTex = createRoadTexture();
+        roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
+        roadTex.repeat.set(10, 10);
+
+        // --- XÂY DỰNG MẶT ĐẤT ---
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(2000, 2000),
+            new THREE.MeshLambertMaterial({ map: roadTex })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // --- PHÂN KHU HÀ NỘI ---
+        const city = new THREE.Group();
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+
+        function addBuilding(x, z, type) {
+    let h, w, d, color;
+    if (type === 'old') {
+        h = 25 + Math.random() * 30;
+        w = 14 + Math.random() * 8;
+        d = 20 + Math.random() * 12;
+
+        const componentType = Math.floor(Math.random() * 9);
+
+        if (componentType === 0) {
+            // ===== ĐIỆN TRỞ =====
+            const rLen = w * 1.8;
+            const rRad = h * 0.18;
+            const body = new THREE.Mesh(
+                new THREE.CylinderGeometry(rRad, rRad, rLen, 12),
+                new THREE.MeshPhongMaterial({ color: 0xd4b483 })
+            );
+            body.rotation.z = Math.PI / 2;
+            body.position.set(x, rRad + 1, z);
+            city.add(body);
+
+            const bandColors = [0xcc0000, 0xff6600, 0xffcc00, 0x336600, 0x000099, 0x999999, 0xffffff, 0x000000];
+            for (let b = 0; b < 4; b++) {
+                const band = new THREE.Mesh(
+                    new THREE.CylinderGeometry(rRad + 0.3, rRad + 0.3, rLen * 0.07, 12),
+                    new THREE.MeshPhongMaterial({ color: bandColors[Math.floor(Math.random() * bandColors.length)] })
+                );
+                band.rotation.z = Math.PI / 2;
+                band.position.set(x - rLen * 0.3 + b * rLen * 0.2, rRad + 1, z);
+                city.add(band);
+            }
+
+            [-rLen * 0.52, rLen * 0.52].forEach(ox => {
+                const leg = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, rRad + 1, 6),
+                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
+                );
+                leg.position.set(x + ox, (rRad + 1) / 2, z);
+                city.add(leg);
+            });
+
+        } else if (componentType === 1) {
+            // ===== DIODE =====
+            const dLen = w * 1.4;
+            const dRad = h * 0.15;
+
+            const body = new THREE.Mesh(
+                new THREE.CylinderGeometry(dRad, dRad, dLen, 12),
+                new THREE.MeshPhongMaterial({ color: 0x111111 })
+            );
+            body.rotation.z = Math.PI / 2;
+            body.position.set(x, dRad + 1, z);
+            city.add(body);
+
+            const stripe = new THREE.Mesh(
+                new THREE.CylinderGeometry(dRad + 0.3, dRad + 0.3, dLen * 0.1, 12),
+                new THREE.MeshPhongMaterial({ color: 0xffffff })
+            );
+            stripe.rotation.z = Math.PI / 2;
+            stripe.position.set(x + dLen * 0.38, dRad + 1, z);
+            city.add(stripe);
+
+            [-dLen * 0.55, dLen * 0.55].forEach(ox => {
+                const leg = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, dRad + 1, 6),
+                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
+                );
+                leg.position.set(x + ox, (dRad + 1) / 2, z);
+                city.add(leg);
+            });
+
+        } else if (componentType === 2) {
+            // ===== CUỘN CẢM =====
+            const iRad = h * 0.12;
+            const iLen = w * 1.6;
+            const coilMat = new THREE.MeshPhongMaterial({ color: 0xcc8800, shininess: 180 });
+
+            const core = new THREE.Mesh(
+                new THREE.CylinderGeometry(iRad * 0.5, iRad * 0.5, iLen * 0.9, 10),
+                new THREE.MeshPhongMaterial({ color: 0x444444 })
+            );
+            core.rotation.z = Math.PI / 2;
+            core.position.set(x, iRad + 1, z);
+            city.add(core);
+
+            for (let c = 0; c < 8; c++) {
+                const ring = new THREE.Mesh(
+                    new THREE.TorusGeometry(iRad, iRad * 0.28, 8, 16),
+                    coilMat
+                );
+                ring.rotation.y = Math.PI / 2;
+                ring.position.set(x - iLen * 0.42 + c * (iLen * 0.85 / 7), iRad + 1, z);
+                city.add(ring);
+            }
+
+            [-iLen * 0.48, iLen * 0.48].forEach(ox => {
+                const leg = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, iRad + 1, 6),
+                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
+                );
+                leg.position.set(x + ox, (iRad + 1) / 2, z);
+                city.add(leg);
+            });
+
+        } else if (componentType === 3) {
+            // ===== TỤ XANH LÁ (cây xanh) =====
+            const ch = h * 1.2;
+            const cw = w * 0.5;
+
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(cw, ch, cw),
+                new THREE.MeshPhongMaterial({ color: 0x2d7a2d, shininess: 30 })
+            );
+            body.position.set(x, ch / 2, z);
+            city.add(body);
+
+            const strip = new THREE.Mesh(
+                new THREE.BoxGeometry(cw + 0.3, ch * 0.07, cw + 0.3),
+                new THREE.MeshPhongMaterial({ color: 0x88cc88 })
+            );
+            strip.position.set(x, ch * 0.82, z);
+            city.add(strip);
+
+            [-cw * 0.28, cw * 0.28].forEach(ox => {
+                const leg = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.35, 0.35, ch * 0.25, 6),
+                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
+                );
+                leg.position.set(x + ox, -(ch * 0.125), z);
+                city.add(leg);
+            });
+
+        } else if (componentType === 4) {
+            // ===== TỤ GỐM XANH =====
+            const ch = h * 0.7;
+            const cw = w * 0.55;
+
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(cw * 1.4, ch * 0.4, cw),
+                new THREE.MeshPhongMaterial({ color: 0x3399cc, shininess: 80 })
+            );
+            body.position.set(x, ch * 0.4 + 1, z);
+            city.add(body);
+
+            [-cw * 0.32, cw * 0.32].forEach(ox => {
+                const leg = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, ch * 0.35, 6),
+                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
+                );
+                leg.position.set(x + ox, ch * 0.175, z);
+                city.add(leg);
+            });
+
+        } else if (componentType === 5) {
+            // ===== NHÀ PHỐ CỔ XÁM =====
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, d),
+                new THREE.MeshPhongMaterial({ color: 0x888888 })
+            );
+            body.position.set(x, h / 2, z);
+            city.add(body);
+
+            const roof = new THREE.Mesh(
+                new THREE.BoxGeometry(w + 1.5, 3, d + 1.5),
+                new THREE.MeshLambertMaterial({ color: 0xcc3300 })
+            );
+            roof.position.set(x, h + 1.5, z);
+            city.add(roof);
+
+            const winMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, shininess: 200 });
+            for (let row = 0; row < 3; row++) {
+                for (let col = -1; col <= 1; col++) {
+                    const win = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, h * 0.1, 0.5), winMat);
+                    win.position.set(x + col * w * 0.3, h * 0.25 + row * h * 0.28, z + d / 2 + 0.1);
+                    city.add(win);
+                }
+            }
+
+        } else if (componentType === 6) {
+            // ===== TRANSISTOR BJT (TO-92) =====
+            const tRad = h * 0.22;
+            const tH   = h * 0.5;
+
+            const tBody = new THREE.Mesh(
+                new THREE.CylinderGeometry(tRad, tRad, tH, 16),
+                new THREE.MeshPhongMaterial({ color: 0x222222, shininess: 60 })
+            );
+            tBody.position.set(x, tH / 2 + 1, z);
+            city.add(tBody);
+
+            const flatFace = new THREE.Mesh(
+                new THREE.BoxGeometry(tRad * 2.05, tH, 0.6),
+                new THREE.MeshPhongMaterial({ color: 0x444444 })
+            );
+            flatFace.position.set(x, tH / 2 + 1, z + tRad);
+            city.add(flatFace);
+
+            const bjt_labels = ['NPN', 'PNP', 'BC547', 'BC557', 'S9013', '2N2222'];
+            const bjt_label = bjt_labels[Math.floor(Math.random() * bjt_labels.length)];
+            (function() {
+                const cv = document.createElement('canvas');
+                cv.width = 128; cv.height = 256;
+                const c = cv.getContext('2d');
+                c.fillStyle = '#333333'; c.fillRect(0, 0, 128, 256);
+                c.fillStyle = '#ffffff'; c.font = 'bold 28px monospace'; c.textAlign = 'center';
+                c.fillText(bjt_label, 64, 115);
+                c.font = '18px monospace'; c.fillStyle = '#aaffaa';
+                c.fillText('BJT', 64, 155);
+                const labelMesh = new THREE.Mesh(
+                    new THREE.PlaneGeometry(tRad * 1.6, tH * 0.7),
+                    new THREE.MeshPhongMaterial({ map: new THREE.CanvasTexture(cv), transparent: true })
+                );
+                labelMesh.position.set(x, tH / 2 + 1, z + tRad + 0.35);
+                city.add(labelMesh);
+            })();
+
+            [-tRad * 0.6, 0, tRad * 0.6].forEach((ox, i) => {
+                const pin = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.35, 0.35, tH * 0.55, 6),
+                    new THREE.MeshPhongMaterial({ color: i === 1 ? 0xddaa00 : 0xbbbbbb, shininess: 180 })
+                );
+                pin.position.set(x + ox, -(tH * 0.275), z);
+                city.add(pin);
+            });
+
+        } else if (componentType === 7) {
+            // ===== MOSFET (TO-220) =====
+            const mW = w * 0.55;
+            const mH = h * 0.55;
+            const mD = d * 0.35;
+
+            const mBody = new THREE.Mesh(
+                new THREE.BoxGeometry(mW, mH, mD),
+                new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 20 })
+            );
+            mBody.position.set(x, mH / 2 + 1, z);
+            city.add(mBody);
+
+            const heatsink = new THREE.Mesh(
+                new THREE.BoxGeometry(mW * 1.1, mH * 1.05, mD * 0.3),
+                new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 200 })
+            );
+            heatsink.position.set(x, mH / 2 + 1, z - mD * 0.65);
+            city.add(heatsink);
+
+            const hole = new THREE.Mesh(
+                new THREE.CylinderGeometry(mW * 0.07, mW * 0.07, mD * 0.35, 8),
+                new THREE.MeshPhongMaterial({ color: 0x333333 })
+            );
+            hole.rotation.x = Math.PI / 2;
+            hole.position.set(x, mH * 0.85, z - mD * 0.65);
+            city.add(hole);
+
+            const mos_labels = ['IRF540', 'IRF3205', 'IRFZ44N', 'BS170', 'FQP30N06'];
+            const mos_label = mos_labels[Math.floor(Math.random() * mos_labels.length)];
+            (function() {
+                const cv = document.createElement('canvas');
+                cv.width = 256; cv.height = 256;
+                const c = cv.getContext('2d');
+                c.fillStyle = '#111111'; c.fillRect(0, 0, 256, 256);
+                c.fillStyle = '#ffffff'; c.font = 'bold 32px monospace'; c.textAlign = 'center';
+                c.fillText(mos_label, 128, 100);
+                c.font = '20px monospace'; c.fillStyle = '#00ccff';
+                c.fillText('N-MOSFET', 128, 148);
+                c.fillStyle = '#ffaa00'; c.font = '18px monospace';
+                c.fillText('G   D   S', 128, 195);
+                const mosLabel = new THREE.Mesh(
+                    new THREE.PlaneGeometry(mW * 0.85, mH * 0.65),
+                    new THREE.MeshPhongMaterial({ map: new THREE.CanvasTexture(cv), transparent: true })
+                );
+                mosLabel.position.set(x, mH / 2 + 1, z + mD / 2 + 0.1);
+                city.add(mosLabel);
+            })();
+
+            [-mW * 0.28, 0, mW * 0.28].forEach((ox, i) => {
+                const pin = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.38, 0.38, mH * 0.5, 6),
+                    new THREE.MeshPhongMaterial({ color: i === 0 ? 0xffcc00 : 0xbbbbbb, shininess: 180 })
+                );
+                pin.position.set(x + ox, -(mH * 0.25), z);
+                city.add(pin);
+            });
+
+        } else {
+            // ===== NHÀ PHỐ CỔ VÀNG =====
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, d),
+                new THREE.MeshPhongMaterial({ color: 0xffdb58 })
+            );
+            body.position.set(x, h / 2, z);
+            city.add(body);
+
+            const roof = new THREE.Mesh(
+                new THREE.BoxGeometry(w + 1.5, 3, d + 1.5),
+                new THREE.MeshLambertMaterial({ color: 0xcc3300 })
+            );
+            roof.position.set(x, h + 1.5, z);
+            city.add(roof);
+
+            const winMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, shininess: 200 });
+            for (let row = 0; row < 3; row++) {
+                for (let col = -1; col <= 1; col++) {
+                    const win = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, h * 0.1, 0.5), winMat);
+                    win.position.set(x + col * w * 0.3, h * 0.25 + row * h * 0.28, z + d / 2 + 0.1);
+                    city.add(win);
+                }
             }
         }
-        this.rings=this.rings.filter(r=>{r.t++;return r.t<55;});
-        this.popups=this.popups.filter(pp=>{pp.life--;pp.y-=0.3;return pp.life>0;});
+    } else { // Cao ốc mới → TỤ ĐIỆN HỘP
+        h = 80 + Math.random() * 120;
+        w = 20 + Math.random() * 10;
+        d = 20 + Math.random() * 10;
+
+        const capColors = [0x111111, 0x4a0e8f, 0x0a3d6b, 0x7a3b1e];
+        const color = capColors[Math.floor(Math.random() * capColors.length)];
+
+        // Giá trị uF ngẫu nhiên
+        const ufValues = ['10µF', '22µF', '47µF', '100µF', '220µF', '470µF', '1000µF'];
+        const voltValues = ['16V', '25V', '35V', '50V', '63V'];
+        const ufLabel = ufValues[Math.floor(Math.random() * ufValues.length)];
+        const vLabel = voltValues[Math.floor(Math.random() * voltValues.length)];
+
+        // --- CANVAS TEXTURE cho mặt trước ---
+        function makeCapTexture(bgColor, uf, volt) {
+            const cv = document.createElement('canvas');
+            cv.width = 256; cv.height = 512;
+            const ctx = cv.getContext('2d');
+
+            // Nền màu thân tụ
+            const hexStr = '#' + bgColor.toString(16).padStart(6, '0');
+            ctx.fillStyle = hexStr;
+            ctx.fillRect(0, 0, 256, 512);
+
+            // Dải sáng trên đỉnh (cực +)
+            ctx.fillStyle = (bgColor === 0x111111) ? '#ffffff' : '#ffdd44';
+            ctx.fillRect(0, 20, 256, 40);
+
+            // Chữ uF - to, trắng/vàng
+            ctx.fillStyle = (bgColor === 0x111111) ? '#ffffff' : '#ffe680';
+            ctx.font = 'bold 72px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(uf, 128, 260);
+
+            // Chữ volt - nhỏ hơn
+            ctx.font = 'bold 44px monospace';
+            ctx.fillStyle = '#aaaaaa';
+            ctx.fillText(volt, 128, 330);
+
+            // Logo tụ (hình 2 đường song song)
+            ctx.strokeStyle = (bgColor === 0x111111) ? '#ffffff' : '#ffdd44';
+            ctx.lineWidth = 8;
+            ctx.beginPath(); ctx.moveTo(70, 390); ctx.lineTo(186, 390); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(70, 415); ctx.lineTo(186, 415); ctx.stroke();
+
+            return new THREE.CanvasTexture(cv);
+        }
+
+        // --- CANVAS TEXTURE cho mặt bên DẤU TRỪ ---
+        function makeMinusSideTexture(bgColor) {
+            const cv = document.createElement('canvas');
+            cv.width = 256; cv.height = 512;
+            const ctx = cv.getContext('2d');
+
+            const hexStr = '#' + bgColor.toString(16).padStart(6, '0');
+            ctx.fillStyle = hexStr;
+            ctx.fillRect(0, 0, 256, 512);
+
+            // Dải xám (cực -)
+            ctx.fillStyle = '#888888';
+            ctx.fillRect(0, 20, 256, 50);
+
+            // Dấu - lặp lại từ trên xuống
+            ctx.fillStyle = '#cccccc';
+            ctx.font = 'bold 52px monospace';
+            ctx.textAlign = 'center';
+            for (let i = 0; i < 6; i++) {
+                ctx.fillText('−  −  −', 128, 100 + i * 70);
+            }
+
+            return new THREE.CanvasTexture(cv);
+        }
+
+        const frontTex = makeCapTexture(color, ufLabel, vLabel);
+        const sideTex  = makeMinusSideTexture(color);
+        const plainMat = new THREE.MeshPhongMaterial({ color: color, shininess: 40 });
+
+        // BoxGeometry mặt: +X, -X, +Y, -Y, +Z(front), -Z
+        const materials = [
+            new THREE.MeshPhongMaterial({ map: sideTex }),   // +X (mặt bên - dấu trừ)
+            plainMat,                                          // -X
+            plainMat,                                          // +Y (đỉnh)
+            plainMat,                                          // -Y (đáy)
+            new THREE.MeshPhongMaterial({ map: frontTex }),  // +Z (mặt trước - chữ uF)
+            plainMat,                                          // -Z
+        ];
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials);
+        body.position.set(x, h/2, z);
+        city.add(body);
+
+        // CHÂN TỤ TRÁI
+        const legGeo = new THREE.BoxGeometry(2, h * 0.28, 2);
+        const legMat = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 200 });
+        const leg1 = new THREE.Mesh(legGeo, legMat);
+        leg1.position.set(x - w * 0.22, -(h * 0.14), z);
+        city.add(leg1);
+
+        // CHÂN TỤ PHẢI
+        const leg2 = new THREE.Mesh(legGeo, legMat);
+        leg2.position.set(x + w * 0.22, -(h * 0.14), z);
+        city.add(leg2);
     }
+}
 
-    draw(){
-        const cw=W(),ch=H(),px=this.x,py=this.y;
-        const sc=Math.min(cw,ch)*0.048;
-        const flick=0.82+Math.random()*0.18;
+        // Tạo hồ nước
+        const lake = new THREE.Mesh(
+            new THREE.CircleGeometry(150, 32),
+            new THREE.MeshPhongMaterial({ color: 0x224466, shininess: 100 })
+        );
+        lake.rotation.x = -Math.PI / 2;
+        lake.position.y = 0.2;
+        scene.add(lake);
 
-        /* Ground rings */
-        if(this.state==='scanning'){
-            const gx=this.target.x*cw, gy=this.target.y*ch;
-            this.rings.forEach(r=>{
-                const prog=r.t/55;
-                ctx.beginPath();
-                ctx.ellipse(gx,gy,sc*(0.5+prog*3),sc*(0.14+prog*0.85),0,0,Math.PI*2);
-                ctx.strokeStyle=this.beamCol+Math.round((1-prog)*190).toString(16).padStart(2,'0');
-                ctx.lineWidth=1.3; ctx.stroke();
+        // Rải nhà theo quy hoạch
+        for (let i = 0; i < 800; i++) {
+            const x = (Math.random() - 0.5) * 1400;
+            const z = (Math.random() - 0.5) * 1400;
+            const dist = Math.sqrt(x*x + z*z);
+
+            if (dist < 160) continue; // Chừa chỗ cho hồ
+
+            if (x > 250 || z > 250) {
+                addBuilding(x, z, 'new');
+            } else {
+                addBuilding(x, z, 'old');
+            }
+        }
+        scene.add(city);
+
+        // ============================================================
+        // --- RỪNG CÂY XANH & VÁCH NÚI NGỌC RUBY ---
+        // ============================================================
+        const nature = new THREE.Group();
+
+        // --- HÀM VẼ CÂY ---
+        function addTree(x, z) {
+            const trunkH = 6 + Math.random() * 8;
+            const trunkR = 0.8 + Math.random() * 0.5;
+            const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5c3a1e });
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(trunkR * 0.6, trunkR, trunkH, 7),
+                trunkMat
+            );
+            trunk.position.set(x, trunkH / 2, z);
+            nature.add(trunk);
+
+            // 3 tầng tán lá hình nón
+            const leafColors = [0x1a7a2a, 0x228b22, 0x2d9e3a, 0x145214, 0x3cb371];
+            const leafMat = new THREE.MeshPhongMaterial({
+                color: leafColors[Math.floor(Math.random() * leafColors.length)],
+                shininess: 20
+            });
+            const layers = 3;
+            for (let i = 0; i < layers; i++) {
+                const layerR = (3.5 - i * 0.7) + Math.random() * 1.2;
+                const layerH = (5 + Math.random() * 3) - i * 0.5;
+                const cone = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, layerR, layerH, 8),
+                    leafMat
+                );
+                cone.position.set(x, trunkH + i * (layerH * 0.55), z);
+                nature.add(cone);
+            }
+        }
+
+        // --- HÀM VẼ VÁCH NÚI CÓ NGỌC RUBY ---
+        function addRubyCliff(x, z) {
+            const cliffW = 18 + Math.random() * 22;
+            const cliffH = 25 + Math.random() * 40;
+            const cliffD = 12 + Math.random() * 14;
+
+            // Thân đá xám xanh
+            const rockColors = [0x5a5a6a, 0x4a4a5a, 0x636373, 0x4e4e60];
+            const rockMat = new THREE.MeshPhongMaterial({
+                color: rockColors[Math.floor(Math.random() * rockColors.length)],
+                shininess: 15
+            });
+
+            // Tạo khối núi từ nhiều box lệch nhau để trông thô ráp
+            const baseBlock = new THREE.Mesh(
+                new THREE.BoxGeometry(cliffW, cliffH, cliffD),
+                rockMat
+            );
+            baseBlock.position.set(x, cliffH / 2, z);
+            baseBlock.rotation.y = Math.random() * Math.PI;
+            nature.add(baseBlock);
+
+            // Thêm vài khối nhỏ lệch để tạo hình núi gồ ghề
+            for (let b = 0; b < 3; b++) {
+                const bw = cliffW * (0.4 + Math.random() * 0.4);
+                const bh = cliffH * (0.3 + Math.random() * 0.5);
+                const chunk = new THREE.Mesh(
+                    new THREE.BoxGeometry(bw, bh, cliffD * 0.8),
+                    rockMat
+                );
+                chunk.position.set(
+                    x + (Math.random() - 0.5) * cliffW * 0.7,
+                    bh / 2 + cliffH * 0.1,
+                    z + (Math.random() - 0.5) * cliffD * 0.5
+                );
+                chunk.rotation.y = Math.random() * Math.PI;
+                nature.add(chunk);
+            }
+
+            // --- TINH THỂ RUBY LẤP LÁNH ---
+            const rubyMat = new THREE.MeshPhongMaterial({
+                color: 0xcc0033,
+                emissive: 0x880011,
+                emissiveIntensity: 0.6,
+                shininess: 400,
+                specular: 0xff6688,
+                transparent: true,
+                opacity: 0.88
+            });
+
+            const numRubies = 4 + Math.floor(Math.random() * 6);
+            for (let r = 0; r < numRubies; r++) {
+                const rubyH = 1.5 + Math.random() * 3.5;
+                const rubyR = 0.6 + Math.random() * 1.2;
+                // Hình bát diện (2 hình chóp ghép đầu nhau)
+                const topCone = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.05, rubyR, rubyH, 6),
+                    rubyMat
+                );
+                const botCone = new THREE.Mesh(
+                    new THREE.CylinderGeometry(rubyR, 0.05, rubyH * 0.6, 6),
+                    rubyMat
+                );
+                const rubyGroup = new THREE.Group();
+                topCone.position.y = rubyH * 0.3;
+                botCone.position.y = -rubyH * 0.3;
+                rubyGroup.add(topCone);
+                rubyGroup.add(botCone);
+
+                // Đặt ruby lên mặt đá, lệch ngẫu nhiên
+                const rx = x + (Math.random() - 0.5) * cliffW * 0.8;
+                const rz = z + (Math.random() - 0.5) * cliffD * 0.6;
+                const ry = cliffH * (0.25 + Math.random() * 0.6);
+                rubyGroup.position.set(rx, ry, rz);
+                rubyGroup.rotation.set(
+                    (Math.random() - 0.5) * 0.8,
+                    Math.random() * Math.PI * 2,
+                    (Math.random() - 0.5) * 0.5
+                );
+                nature.add(rubyGroup);
+
+                // Ánh sáng đỏ nhỏ từ ruby
+                if (r % 3 === 0) {
+                    const rubyLight = new THREE.PointLight(0xff0033, 0.8, 40);
+                    rubyLight.position.set(rx, ry + 2, rz);
+                    nature.add(rubyLight);
+                }
+            }
+        }
+
+        // --- ZONE DEFINITIONS ---
+        // Khu old: x < 250, z < 250
+        // Khu new: x > 250 || z > 250
+        // Rải cây và núi vào BỀ MẶT TRỐNG trong khoảng [-700, 700] x [-700, 700]
+        // Tránh: hồ (r<160), tránh zone dày đặc building (dùng xác suất phân bố)
+
+        // Hàm kiểm tra có nên đặt thiên nhiên tại điểm này không
+        function isGoodNatureSpot(x, z) {
+            const dist = Math.sqrt(x * x + z * z);
+            // Tránh hồ
+            if (dist < 170) return false;
+            // Phải trong bản đồ
+            if (Math.abs(x) > 680 || Math.abs(z) > 680) return false;
+            return true;
+        }
+
+        // Rải cây: ưu tiên vùng BIÊN của 2 khu tòa nhà (nơi ít tòa nhà hơn)
+        // Khu old (x<250, z<250): rải cây xung quanh tòa nhà
+        // Khu new (x>250||z>250): rải cây và vách núi quanh cao ốc
+
+        const treePositions = new Set();
+
+        function rng2(x, z, seed) {
+            // Deterministic pseudo-random để tránh overlap
+            return ((Math.sin(x * 12.9898 + z * 78.233 + seed) * 43758.5453) % 1 + 1) % 1;
+        }
+
+        // Rải cây theo lưới ngẫu nhiên với jitter
+        const GRID_STEP = 28;
+        for (let gx = -680; gx <= 680; gx += GRID_STEP) {
+            for (let gz = -680; gz <= 680; gz += GRID_STEP) {
+                // Jitter vị trí
+                const jx = gx + (Math.random() - 0.5) * GRID_STEP * 0.85;
+                const jz = gz + (Math.random() - 0.5) * GRID_STEP * 0.85;
+
+                if (!isGoodNatureSpot(jx, jz)) continue;
+
+                // Xác suất đặt cây cao hơn ở vùng ít building (biên giữa 2 zone)
+                // Giảm mật độ cây ở vùng dày đặc cao ốc (|x|>400 && |z|>400)
+                const isDeepNew = (Math.abs(jx) > 400 && Math.abs(jz) > 400);
+                const isOldZone = (jx < 250 && jz < 250);
+                const prob = isDeepNew ? 0.12 : (isOldZone ? 0.22 : 0.30);
+
+                if (Math.random() < prob) {
+                    addTree(jx, jz);
+                }
+            }
+        }
+
+        // Rải cụm cây dày hơn ở vùng biên giữa 2 khu (khoảng x=200-350, z=200-350)
+        for (let i = 0; i < 120; i++) {
+            const jx = 150 + Math.random() * 250 - (Math.random() < 0.5 ? 350 : 0);
+            const jz = 150 + Math.random() * 250 - (Math.random() < 0.5 ? 350 : 0);
+            if (isGoodNatureSpot(jx, jz)) {
+                addTree(jx, jz);
+            }
+        }
+
+        // Rải vách núi có ruby: ưu tiên khu biên ngoài và góc bản đồ
+        const cliffSpots = [];
+        for (let i = 0; i < 55; i++) {
+            let cx, cz;
+            // Phân bố: 60% ở ngoại ô (r=450-650), 40% ở trong (r=200-450)
+            if (Math.random() < 0.6) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 450 + Math.random() * 200;
+                cx = Math.cos(angle) * r;
+                cz = Math.sin(angle) * r;
+            } else {
+                cx = (Math.random() - 0.5) * 700;
+                cz = (Math.random() - 0.5) * 700;
+            }
+            if (isGoodNatureSpot(cx, cz)) {
+                addRubyCliff(cx, cz);
+                cliffSpots.push({ x: cx, z: cz });
+            }
+        }
+
+        scene.add(nature);
+
+        // Animate ruby glow (pulsate emissive) — lưu ruby meshes
+        // Collect tất cả ruby mesh để animate
+        const rubyMeshes = [];
+        nature.traverse(obj => {
+            if (obj.isMesh && obj.material && obj.material.emissive &&
+                obj.material.color && obj.material.color.r > 0.5 &&
+                obj.material.color.g < 0.1) {
+                rubyMeshes.push(obj);
+            }
+        });
+
+        // ============================================================
+        // --- GIAO THÔNG: Ô TÔ, XE MÁY, NGƯỜI ĐI BỘ ---
+        // ============================================================
+
+        const traffic = []; // mảng lưu tất cả phương tiện
+
+        // --- TẠO Ô TÔ ---
+        function createCar() {
+            const group = new THREE.Group();
+            const carColors = [0xcc2200, 0x0044cc, 0xffffff, 0x222222, 0xffcc00, 0x006633, 0xff6600, 0x880088];
+            const bodyColor = carColors[Math.floor(Math.random() * carColors.length)];
+
+            // Thân xe dưới
+            const bodyLow = new THREE.Mesh(
+                new THREE.BoxGeometry(7, 2.2, 3.5),
+                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 120 })
+            );
+            bodyLow.position.y = 1.5;
+            group.add(bodyLow);
+
+            // Thân xe trên (cabin)
+            const bodyTop = new THREE.Mesh(
+                new THREE.BoxGeometry(4.5, 2, 3.2),
+                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 120 })
+            );
+            bodyTop.position.set(-0.3, 3.3, 0);
+            group.add(bodyTop);
+
+            // Kính chắn gió (xanh nhạt)
+            const glassMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, transparent: true, opacity: 0.7, shininess: 200 });
+            const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.6, 2.8), glassMat);
+            windshield.position.set(1.9, 3.3, 0);
+            group.add(windshield);
+
+            // Bánh xe (4 cái)
+            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.7, 12);
+            const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+            [[-2.5, 0, 2], [2.5, 0, 2], [-2.5, 0, -2], [2.5, 0, -2]].forEach(([wx, wy, wz]) => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.rotation.x = Math.PI / 2;
+                wheel.position.set(wx, 0.9, wz);
+                group.add(wheel);
+            });
+
+            // Đèn trước (vàng)
+            const headlightMat = new THREE.MeshPhongMaterial({ color: 0xffffaa, emissive: 0xffff44, emissiveIntensity: 0.8 });
+            [-1.1, 1.1].forEach(oz => {
+                const light = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.8), headlightMat);
+                light.position.set(3.5, 1.8, oz);
+                group.add(light);
+            });
+
+            // Đèn hậu (đỏ)
+            const taillightMat = new THREE.MeshPhongMaterial({ color: 0xff2200, emissive: 0xff0000, emissiveIntensity: 0.5 });
+            [-1.1, 1.1].forEach(oz => {
+                const tlight = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.8), taillightMat);
+                tlight.position.set(-3.5, 1.8, oz);
+                group.add(tlight);
+            });
+
+            return group;
+        }
+
+        // --- TẠO XE MÁY ---
+        function createMotorbike() {
+            const group = new THREE.Group();
+            const motoColors = [0xcc0000, 0x0055ff, 0x111111, 0xffaa00, 0x009944];
+            const bodyColor = motoColors[Math.floor(Math.random() * motoColors.length)];
+
+            // Thân xe
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(4, 1.2, 1.4),
+                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 100 })
+            );
+            body.position.y = 2;
+            group.add(body);
+
+            // Đầu xe (ốp đèn)
+            const nose = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1.4, 1.2),
+                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 100 })
+            );
+            nose.position.set(2, 2.2, 0);
+            group.add(nose);
+
+            // Đèn trước
+            const headlight = new THREE.Mesh(
+                new THREE.BoxGeometry(0.2, 0.6, 0.8),
+                new THREE.MeshPhongMaterial({ color: 0xffffaa, emissive: 0xffff44, emissiveIntensity: 0.8 })
+            );
+            headlight.position.set(2.6, 2.2, 0);
+            group.add(headlight);
+
+            // Yên xe
+            const seat = new THREE.Mesh(
+                new THREE.BoxGeometry(2.2, 0.5, 1.3),
+                new THREE.MeshPhongMaterial({ color: 0x222222 })
+            );
+            seat.position.set(-0.3, 2.8, 0);
+            group.add(seat);
+
+            // Người lái (capsule đơn giản)
+            const riderBody = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.45, 0.45, 2.2, 8),
+                new THREE.MeshPhongMaterial({ color: 0x334455 })
+            );
+            riderBody.position.set(-0.2, 4.5, 0);
+            group.add(riderBody);
+
+            // Đầu người lái
+            const riderHead = new THREE.Mesh(
+                new THREE.SphereGeometry(0.55, 8, 8),
+                new THREE.MeshPhongMaterial({ color: 0xff9966 })
+            );
+            riderHead.position.set(-0.1, 5.8, 0);
+            group.add(riderHead);
+
+            // Mũ bảo hiểm
+            const helmet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.65, 8, 6),
+                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 200 })
+            );
+            helmet.position.set(-0.1, 5.85, 0);
+            group.add(helmet);
+
+            // Bánh xe
+            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.5, 12);
+            const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+            [2, -2].forEach(wx => {
+                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+                wheel.rotation.x = Math.PI / 2;
+                wheel.position.set(wx, 0.9, 0);
+                group.add(wheel);
+            });
+
+            return group;
+        }
+
+        // --- TẠO NGƯỜI ĐI BỘ ---
+        function createPedestrian() {
+            const group = new THREE.Group();
+            const skinColors = [0xffcc99, 0xcc9966, 0xffaa77];
+            const shirtColors = [0xff4444, 0x4444ff, 0x44aa44, 0xffffff, 0xff9900, 0x9900cc, 0x00cccc];
+            const pantColors  = [0x223355, 0x111111, 0x553322, 0x445533];
+
+            const skin  = skinColors [Math.floor(Math.random() * skinColors.length)];
+            const shirt = shirtColors[Math.floor(Math.random() * shirtColors.length)];
+            const pant  = pantColors [Math.floor(Math.random() * pantColors.length)];
+
+            // Chân
+            [-0.3, 0.3].forEach(ox => {
+                const leg = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.4, 1.4, 0.4),
+                    new THREE.MeshPhongMaterial({ color: pant })
+                );
+                leg.position.set(ox, 0.7, 0);
+                group.add(leg);
+            });
+
+            // Thân
+            const torso = new THREE.Mesh(
+                new THREE.BoxGeometry(0.9, 1.4, 0.5),
+                new THREE.MeshPhongMaterial({ color: shirt })
+            );
+            torso.position.y = 2.1;
+            group.add(torso);
+
+            // Tay
+            [-0.7, 0.7].forEach(ox => {
+                const arm = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.35, 1.1, 0.35),
+                    new THREE.MeshPhongMaterial({ color: shirt })
+                );
+                arm.position.set(ox, 2.1, 0);
+                group.add(arm);
+            });
+
+            // Đầu
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(0.45, 8, 8),
+                new THREE.MeshPhongMaterial({ color: skin })
+            );
+            head.position.y = 3.35;
+            group.add(head);
+
+            return group;
+        }
+
+        // --- THU THẬP VỊ TRÍ CHƯỚNG NGẠI VẬT (tòa nhà) ---
+        // Dùng bounding circle đơn giản cho mỗi building dựa trên x,z đã spawn
+        const obstacles = []; // { x, z, r }
+        const LAKE_R = 162; // bán kính hồ + buffer
+
+        // Hàm kiểm tra vị trí có hợp lệ không (tránh hồ, tránh biên)
+        function isValidSpawn(x, z) {
+            const distLake = Math.sqrt(x * x + z * z);
+            if (distLake < LAKE_R + 20) return false;
+            if (Math.abs(x) > 680 || Math.abs(z) > 680) return false;
+            return true;
+        }
+
+        // Hàm tìm vị trí spawn hợp lệ
+        function randomValidPos(minR, maxR) {
+            let x, z, tries = 0;
+            do {
+                const angle = Math.random() * Math.PI * 2;
+                const r = minR + Math.random() * (maxR - minR);
+                x = Math.cos(angle) * r + (Math.random() - 0.5) * 40;
+                z = Math.sin(angle) * r + (Math.random() - 0.5) * 40;
+                tries++;
+            } while (!isValidSpawn(x, z) && tries < 30);
+            return { x, z };
+        }
+
+        // --- KHỞI TẠO PHƯƠNG TIỆN ---
+        // Ô tô: 17 chiếc (giảm một nửa từ 35)
+        for (let i = 0; i < 17; i++) {
+            const car = createCar();
+            const pos = randomValidPos(170, 650);
+            const angle = Math.atan2(pos.z, pos.x);
+            const dir = (Math.random() > 0.5 ? 1 : -1);
+            const speed = (0.12 + Math.random() * 0.12) * dir; // đơn vị world/frame
+            car.position.set(pos.x, 0, pos.z);
+            car.rotation.y = -angle + (dir < 0 ? Math.PI : 0);
+            scene.add(car);
+            traffic.push({
+                mesh: car,
+                type: 'car',
+                vx: Math.cos(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
+                vz: -Math.sin(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
+                baseSpeed: Math.abs(speed),
+                wobble: Math.random() * Math.PI * 2,
+                stepPhase: 0,
+                turnTimer: 0,
+                turnInterval: 180 + Math.random() * 300
             });
         }
 
-        /* Beam cone */
-        if(this.state==='scanning'&&this.beamAlpha>0.01){
-            const gx=this.target.x*cw, gy=this.target.y*ch;
-            const a=this.beamAlpha*flick;
-            const spread=sc*1.6;
-            const grad=ctx.createLinearGradient(px,py+sc*0.35,gx,gy);
-            grad.addColorStop(0,this.beamCol+Math.round(a*160).toString(16).padStart(2,'0'));
-            grad.addColorStop(0.6,this.beamCol+Math.round(a*60).toString(16).padStart(2,'0'));
-            grad.addColorStop(1,this.beamCol+'00');
-            ctx.beginPath();
-            ctx.moveTo(px-sc*0.20,py+sc*0.35);
-            ctx.lineTo(gx-spread,gy);
-            ctx.lineTo(gx+spread,gy);
-            ctx.lineTo(px+sc*0.20,py+sc*0.35);
-            ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
-            /* center ray */
-            ctx.beginPath(); ctx.moveTo(px,py+sc*0.35); ctx.lineTo(gx,gy);
-            ctx.strokeStyle=this.beamCol+Math.round(a*230).toString(16).padStart(2,'0');
-            ctx.lineWidth=1.8; ctx.stroke();
-            /* sweep line */
-            const sw=((performance.now()/700)%1);
-            const sy2=py+sc*0.35+(gy-(py+sc*0.35))*sw;
-            ctx.beginPath();
-            ctx.moveTo(px-sc*0.18*(1-sw*0.6),sy2);
-            ctx.lineTo(px+sc*0.18*(1-sw*0.6),sy2);
-            ctx.strokeStyle=this.beamCol+Math.round(a*200).toString(16).padStart(2,'0');
-            ctx.lineWidth=0.8; ctx.stroke();
+        // Xe máy: 30 chiếc (giảm một nửa từ 60)
+        for (let i = 0; i < 30; i++) {
+            const moto = createMotorbike();
+            const pos = randomValidPos(170, 650);
+            const angle = Math.atan2(pos.z, pos.x);
+            const dir = (Math.random() > 0.5 ? 1 : -1);
+            const speed = (0.18 + Math.random() * 0.15) * dir;
+            moto.position.set(pos.x, 0, pos.z);
+            moto.rotation.y = -angle + (dir < 0 ? Math.PI : 0);
+            scene.add(moto);
+            traffic.push({
+                mesh: moto,
+                type: 'moto',
+                vx: Math.cos(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
+                vz: -Math.sin(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
+                baseSpeed: Math.abs(speed),
+                wobble: Math.random() * Math.PI * 2,
+                stepPhase: 0,
+                turnTimer: 0,
+                turnInterval: 120 + Math.random() * 200
+            });
         }
 
-        /* ── Draw ship ── */
-        ctx.save();
-        ctx.translate(px,py);
-        const tilt=this.state==='flying'
-            ?Math.atan2(this.ty-this.sy,this.tx-this.sx)*0.12
-            :Math.sin(this.hoverPhase*0.5)*0.035;
-        ctx.rotate(tilt);
-
-        /* Engine flames */
-        const eA=0.45+Math.sin(this.enginePhase)*0.3;
-        [-sc*0.52,0,sc*0.52].forEach(tx2=>{
-            /* nozzle */
-            ctx.fillStyle='#1a1a2e';
-            ctx.beginPath(); ctx.ellipse(tx2,sc*0.28,sc*0.095,sc*0.055,0,0,Math.PI*2); ctx.fill();
-            /* flame */
-            const fg=ctx.createRadialGradient(tx2,sc*0.30,0,tx2,sc*0.36,sc*0.26);
-            fg.addColorStop(0,'#fff');
-            fg.addColorStop(0.2,this.accentCol);
-            fg.addColorStop(0.6,this.accentCol+'88');
-            fg.addColorStop(1,this.accentCol+'00');
-            ctx.beginPath();
-            ctx.ellipse(tx2,sc*0.30,sc*0.075,sc*(0.14+eA*0.12)*(0.75+Math.random()*0.5),0,0,Math.PI*2);
-            ctx.fillStyle=fg; ctx.fill();
-        });
-
-        /* Lower hull disc */
-        const hg=ctx.createRadialGradient(-sc*0.1,-sc*0.02,0,0,sc*0.05,sc*0.72);
-        hg.addColorStop(0,'#4a5568'); hg.addColorStop(0.55,'#2d3748'); hg.addColorStop(1,'#1a202c');
-        ctx.beginPath(); ctx.ellipse(0,sc*0.06,sc*0.74,sc*0.26,0,0,Math.PI*2);
-        ctx.fillStyle=hg; ctx.fill();
-        ctx.strokeStyle=this.accentCol+'55'; ctx.lineWidth=1.2; ctx.stroke();
-
-        /* Hull ring grooves */
-        [0.58,0.44].forEach(r=>{
-            ctx.beginPath(); ctx.ellipse(0,sc*0.04,sc*r,sc*r*0.35,0,0,Math.PI*2);
-            ctx.strokeStyle=this.accentCol+'30'; ctx.lineWidth=0.7; ctx.stroke();
-        });
-
-        /* Cockpit dome */
-        const cg=ctx.createRadialGradient(-sc*0.12,-sc*0.30,0,0,-sc*0.16,sc*0.40);
-        cg.addColorStop(0,'#5a8aaa'); cg.addColorStop(0.45,'#2a4a6a'); cg.addColorStop(1,'#091826');
-        ctx.beginPath(); ctx.ellipse(0,-sc*0.12,sc*0.40,sc*0.28,0,0,Math.PI*2);
-        ctx.fillStyle=cg; ctx.fill();
-        ctx.strokeStyle=this.accentCol+'99'; ctx.lineWidth=1.3; ctx.stroke();
-        /* cockpit glint */
-        ctx.beginPath(); ctx.ellipse(-sc*0.10,-sc*0.22,sc*0.14,sc*0.07,-0.4,0,Math.PI*2);
-        ctx.fillStyle='rgba(255,255,255,0.14)'; ctx.fill();
-
-        /* Side nav lights */
-        const blink=Math.sin(performance.now()*0.0038)*0.5+0.5;
-        [[-sc*0.70,sc*0.05,'#ff6b6b'],[sc*0.70,sc*0.05,'#6bceff']].forEach(([lx,ly,lc])=>{
-            ctx.beginPath(); ctx.arc(lx,ly,sc*0.065,0,Math.PI*2);
-            ctx.fillStyle=lc+Math.round(blink*255).toString(16).padStart(2,'0'); ctx.fill();
-            const lg=ctx.createRadialGradient(lx,ly,0,lx,ly,sc*0.22);
-            lg.addColorStop(0,lc+'55'); lg.addColorStop(1,lc+'00');
-            ctx.beginPath(); ctx.arc(lx,ly,sc*0.22,0,Math.PI*2); ctx.fillStyle=lg; ctx.fill();
-        });
-
-        /* Belly scan glow */
-        if(this.state==='scanning'){
-            const sg=ctx.createRadialGradient(0,sc*0.26,0,0,sc*0.26,sc*0.40);
-            sg.addColorStop(0,this.beamCol+Math.round(this.beamAlpha*flick*200).toString(16).padStart(2,'0'));
-            sg.addColorStop(1,this.beamCol+'00');
-            ctx.beginPath(); ctx.ellipse(0,sc*0.26,sc*0.38,sc*0.20,0,0,Math.PI*2);
-            ctx.fillStyle=sg; ctx.fill();
+        // Người đi bộ: 20 người (giảm một nửa từ 40)
+        for (let i = 0; i < 20; i++) {
+            const ped = createPedestrian();
+            const pos = randomValidPos(170, 650);
+            const angle = Math.atan2(pos.z, pos.x);
+            const dir = (Math.random() > 0.5 ? 1 : -1);
+            const speed = (0.04 + Math.random() * 0.03) * dir;
+            ped.position.set(pos.x, 0, pos.z);
+            ped.rotation.y = -angle + (dir < 0 ? Math.PI : 0);
+            scene.add(ped);
+            traffic.push({
+                mesh: ped,
+                type: 'ped',
+                vx: Math.cos(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
+                vz: -Math.sin(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
+                baseSpeed: Math.abs(speed),
+                wobble: Math.random() * Math.PI * 2,
+                stepPhase: Math.random() * Math.PI * 2,
+                turnTimer: 0,
+                turnInterval: 60 + Math.random() * 120
+            });
         }
 
-        /* Drone ID text */
-        ctx.fillStyle=this.accentCol+'dd';
-        ctx.font=`bold ${sc*0.21}px monospace`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('Dr-0'+(this.id+1),0,-sc*0.11);
+        // --- UPDATE GIAO THÔNG MỖI FRAME với STEERING ---
+        function updateTraffic() {
+            traffic.forEach(v => {
+                const pos = v.mesh.position;
+                v.wobble += 0.05;
+                v.turnTimer++;
 
-        /* Outer aura glow */
-        const aura=ctx.createRadialGradient(0,0,sc*0.35,0,0,sc*1.15);
-        aura.addColorStop(0,this.accentCol+'00');
-        aura.addColorStop(0.65,this.accentCol+'0e');
-        aura.addColorStop(1,this.accentCol+'00');
-        ctx.beginPath(); ctx.ellipse(0,0,sc*1.15,sc*0.72,0,0,Math.PI*2);
-        ctx.fillStyle=aura; ctx.fill();
+                // --- STEERING: tránh hồ ---
+                const distLake = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+                if (distLake < LAKE_R + 25) {
+                    // Đẩy ra ngoài: xoay velocity ngược hướng tâm hồ
+                    const nx = pos.x / distLake;
+                    const nz = pos.z / distLake;
+                    const dot = v.vx * nx + v.vz * nz;
+                    // Trừ phần tiếp xúc vào hồ, thêm phần tiếp tuyến
+                    v.vx += -dot * nx * 0.4 + nz * v.baseSpeed * 0.3;
+                    v.vz += -dot * nz * 0.4 - nx * v.baseSpeed * 0.3;
+                }
 
-        ctx.restore();
+                // --- STEERING: tránh biên bản đồ ---
+                const BORDER = 660;
+                if (pos.x > BORDER)  v.vx -= 0.08;
+                if (pos.x < -BORDER) v.vx += 0.08;
+                if (pos.z > BORDER)  v.vz -= 0.08;
+                if (pos.z < -BORDER) v.vz += 0.08;
 
-        /* Flight path dashes */
-        if(this.state==='flying'&&this.tProg<0.88){
-            ctx.save(); ctx.globalAlpha=0.22; ctx.setLineDash([4,7]);
-            ctx.strokeStyle=this.accentCol; ctx.lineWidth=1;
-            ctx.beginPath(); ctx.moveTo(px,py);
-            ctx.lineTo(this.tx,this.ty+H()*0.13); ctx.stroke();
-            ctx.setLineDash([]); ctx.restore();
+                // --- STEERING: tránh tòa nhà (dùng obstacle list) ---
+                // Scan nhanh các obstacle gần nhất (không dùng vòng lặp toàn bộ 800 nhà)
+                // Thay vào đó dùng grid check đơn giản: nếu vị trí mới bị block thì quẹo
+                const CLEARANCE = v.type === 'car' ? 18 : (v.type === 'moto' ? 12 : 8);
+                // Kiểm tra ô lưới quanh vị trí tiếp theo
+                const nextX = pos.x + v.vx;
+                const nextZ = pos.z + v.vz;
+                // Đơn giản: nếu vị trí tiếp theo nằm trong cluster tòa nhà (x>250 || z>250 = new building zone)
+                // dùng noise-based deflection — xoay nhẹ velocity theo wobble
+                const inDenseZone = (Math.abs(nextX) > 240 || Math.abs(nextZ) > 240);
+                if (inDenseZone) {
+                    // Thêm lực lắc để mô phỏng tránh nhà
+                    const wobbleTurn = Math.sin(v.wobble * 1.7) * 0.06;
+                    const cosW = Math.cos(wobbleTurn), sinW = Math.sin(wobbleTurn);
+                    const newVx = v.vx * cosW - v.vz * sinW;
+                    const newVz = v.vx * sinW + v.vz * cosW;
+                    v.vx = newVx; v.vz = newVz;
+                }
+
+                // --- Thỉnh thoảng đổi hướng ngẫu nhiên (như chuyển làn) ---
+                if (v.turnTimer > v.turnInterval) {
+                    v.turnTimer = 0;
+                    v.turnInterval = (v.type === 'car' ? 180 : v.type === 'moto' ? 120 : 60) + Math.random() * 200;
+                    const turnAmt = (Math.random() - 0.5) * (v.type === 'ped' ? 1.2 : 0.5);
+                    const cosT = Math.cos(turnAmt), sinT = Math.sin(turnAmt);
+                    const newVx = v.vx * cosT - v.vz * sinT;
+                    const newVz = v.vx * sinT + v.vz * cosT;
+                    v.vx = newVx; v.vz = newVz;
+                }
+
+                // --- Chuẩn hóa tốc độ (giữ baseSpeed) ---
+                const curSpeed = Math.sqrt(v.vx * v.vx + v.vz * v.vz);
+                if (curSpeed > 0.001) {
+                    v.vx = (v.vx / curSpeed) * v.baseSpeed;
+                    v.vz = (v.vz / curSpeed) * v.baseSpeed;
+                }
+
+                // --- Di chuyển ---
+                pos.x += v.vx;
+                pos.z += v.vz;
+
+                // --- Xoay mặt theo hướng đi ---
+                if (curSpeed > 0.001) {
+                    // Car/moto model dài theo trục X (đèn trước ở +X) → cần offset thêm PI/2
+                    const modelOffset = (v.type === 'ped') ? 0 : Math.PI / 2;
+                    const targetAngle = Math.atan2(v.vx, v.vz) - modelOffset;
+                    let curAngle = v.mesh.rotation.y;
+                    let diff = targetAngle - curAngle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    const lerpRate = v.type === 'car' ? 0.06 : v.type === 'moto' ? 0.09 : 0.12;
+                    v.mesh.rotation.y += diff * lerpRate;
+                }
+
+                // --- Người đi bộ: nhún chân ---
+                if (v.type === 'ped') {
+                    v.stepPhase += 0.15;
+                    pos.y = Math.abs(Math.sin(v.stepPhase)) * 0.25;
+                } else {
+                    pos.y = 0;
+                }
+            });
         }
 
-        /* Popups */
-        this.popups.forEach(pp=>{
-            const a=Math.min(1,pp.life/22);
-            ctx.save(); ctx.globalAlpha=a;
-            ctx.font='bold 11px monospace';
-            const tw=ctx.measureText(pp.text).width+20;
-            ctx.fillStyle='rgba(0,6,3,0.88)';
-            ctx.strokeStyle=pp.col; ctx.lineWidth=1;
-            ctx.beginPath();
-            if(ctx.roundRect) ctx.roundRect(pp.x-tw/2,pp.y-13,tw,24,4);
-            else ctx.rect(pp.x-tw/2,pp.y-13,tw,24);
-            ctx.fill(); ctx.stroke();
-            ctx.fillStyle=pp.col; ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillText(pp.text,pp.x,pp.y); ctx.restore();
-        });
-    }
-}
+        // ============================================================
+        // --- THÊM CHỮ EMIN VÀO CÁC TÒA NHÀ CAO ỐC (type 'new') ---
+        // ============================================================
+        const eminNames = [
+            'Emin Hà Nội', 'Emin HCM', 'Emin Bắc Ninh',
+            'Emin Hải Phòng', 'Emin Đà Nẵng', 'Emin Đồng Nai'
+        ];
 
-/* ── Dot markers (invisible — chỉ dùng nội bộ cho drone targeting) ── */
-function drawDots(){
-    /* Ẩn hoàn toàn — tọa độ vẫn tồn tại cho drones */
-}
+        function addEminLabel(x, z, h, w, d) {
+            const name = eminNames[Math.floor(Math.random() * eminNames.length)];
+            const cv = document.createElement('canvas');
+            cv.width = 512; cv.height = 256;
+            const ctx = cv.getContext('2d');
 
-/* ── Clock ── */
-const t0=Date.now();
-function updateClock(){
-    const e=~~((Date.now()-t0)/1000);
-    document.getElementById('clock').textContent=
-        String(~~(e/3600)).padStart(2,'0')+':'+
-        String(~~((e%3600)/60)).padStart(2,'0')+':'+
-        String(e%60).padStart(2,'0');
-}
+            // Nền trong suốt
+            ctx.clearRect(0, 0, 512, 256);
 
-/* ── Status HUD ── */
-function updateStatus(d){
-    const p=d.id===0?'t1':'t2';
-    document.getElementById(p+'-status').textContent=
-        d.state==='flying'?'EN ROUTE':d.state==='scanning'?'SCANNING':'IDLE';
-}
+            // Bo góc nền tối bán trong suốt
+            ctx.fillStyle = 'rgba(0,0,0,0.72)';
+            ctx.roundRect(8, 8, 496, 240, 18);
+            ctx.fill();
 
-/* ── Init ── */
-const drones=[
-    new Drone(0,'#00ff88','#00ffcc',0.22,0.30),
-    new Drone(1,'#00aaff','#aaccff',0.72,0.28),
-];
+            // Viền neon xanh
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 5;
+            ctx.roundRect(8, 8, 496, 240, 18);
+            ctx.stroke();
 
-/* ── Click to dispatch drone ── */
-const CLICK_RADIUS = 85; /* px bán kính tìm linh kiện quanh điểm click */
-let noTargetFlash = null; /* hiệu ứng khi click chỗ trống */
+            // Chữ EMIN to, gradient xanh neon
+            const grad = ctx.createLinearGradient(0, 40, 0, 150);
+            grad.addColorStop(0, '#00ffee');
+            grad.addColorStop(1, '#0099ff');
+            ctx.fillStyle = grad;
+            ctx.font = 'bold 90px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('EMIN', 256, 130);
 
-wrap.addEventListener('click', e=>{
-    const rect = wrap.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+            // Dòng tên chi nhánh nhỏ hơn
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 38px Arial';
+            const branch = name.replace('Emin ', '');
+            ctx.fillText(branch, 256, 195);
 
-    /* Tìm linh kiện gần nhất trong bán kính */
-    let best = null, bestDist = CLICK_RADIUS;
-    COMPS.forEach(c=>{
-        const cx = c.x * W(), cy = c.y * H();
-        const d = Math.hypot(mx - cx, my - cy);
-        if(d < bestDist){ bestDist = d; best = c; }
-    });
+            const tex = new THREE.CanvasTexture(cv);
+            const labelW = w * 1.1;
+            const labelH = h * 0.22;
 
-    if(best){
-        /* Chọn drone phù hợp nhất:
-           ưu tiên drone đang scanning (rảnh hơn drone đang bay dài)
-           nếu cả 2 đang flying thì chọn drone gần target hơn */
-        let chosen;
-        const flying  = drones.filter(d => d.state === 'flying');
-        const scanning = drones.filter(d => d.state === 'scanning');
-
-        if(scanning.length > 0){
-            /* lấy drone scanning gần vị trí click nhất */
-            chosen = scanning.reduce((a,b)=>
-                Math.hypot(a.x - mx, a.y - my) < Math.hypot(b.x - mx, b.y - my) ? a : b
+            // Gán lên mặt trước (z+)
+            const label = new THREE.Mesh(
+                new THREE.PlaneGeometry(labelW, labelH),
+                new THREE.MeshPhongMaterial({ map: tex, transparent: true, depthWrite: false })
             );
-        } else {
-            /* cả 2 đang bay → lấy cái gần điểm click hơn */
-            chosen = flying.reduce((a,b)=>
-                Math.hypot(a.x - mx, a.y - my) < Math.hypot(b.x - mx, b.y - my) ? a : b
-            );
+            label.position.set(x, h * 0.6, z + d / 2 + 0.5);
+            city.add(label);
+
+            // Mặt sau (z-)
+            const labelBack = label.clone();
+            labelBack.position.set(x, h * 0.6, z - d / 2 - 0.5);
+            labelBack.rotation.y = Math.PI;
+            city.add(labelBack);
         }
 
-        chosen.dispatchTo(best);
-
-        /* Hiệu ứng ripple tại điểm click */
-        noTargetFlash = { x: mx, y: my, t: 0, col: best.col, label: best.name, found: true };
-    } else {
-        /* Click chỗ trống — flash đỏ "NO TARGET" */
-        noTargetFlash = { x: mx, y: my, t: 0, col: '#ff4444', label: 'NO TARGET', found: false };
-    }
-});
-
-/* Vẽ hiệu ứng ripple tại điểm click */
-function drawClickFX(){
-    if(!noTargetFlash) return;
-    const f = noTargetFlash;
-    f.t++;
-    const prog = f.t / 55;
-    if(prog >= 1){ noTargetFlash = null; return; }
-
-    const alpha = 1 - prog;
-
-    /* Ripple vòng tròn lan ra */
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, 8 + prog * 44, 0, Math.PI * 2);
-    ctx.strokeStyle = f.col + Math.round(alpha * 200).toString(16).padStart(2,'0');
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    /* Vòng thứ 2 nhỏ hơn */
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, 4 + prog * 22, 0, Math.PI * 2);
-    ctx.strokeStyle = f.col + Math.round(alpha * 130).toString(16).padStart(2,'0');
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-
-    /* Label nổi lên */
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.font = 'bold 11px monospace';
-    const tw = ctx.measureText(f.label).width + 18;
-    const ty = f.y - 18 - prog * 20;
-    ctx.fillStyle = 'rgba(0,6,3,0.85)';
-    ctx.strokeStyle = f.col;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(f.x - tw/2, ty - 11, tw, 22, 4);
-    else ctx.rect(f.x - tw/2, ty - 11, tw, 22);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = f.col;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(f.label, f.x, ty);
-    ctx.restore();
-}
-
-
-/* ── Typewriter tooltip ── */
-const twBox = document.getElementById('typewriter-box');
-const twText = document.getElementById('typewriter-text');
-let twTimer = null;
-let twIndex = 0;
-let twStr = '';
-const TW_MAX_CHARS = 28; /* số ký tự tối đa hiển thị trong khung */
-
-function startTypewriter(str) {
-    clearInterval(twTimer);
-    twStr = str;
-    twIndex = 0;
-    twText.textContent = '';
-    twBox.style.display = 'block';
-
-    /* Tính số ký tự vừa khung dựa theo width thực tế */
-    const charWidth = 8.5; /* px mỗi ký tự font mono 11px letter-spacing:2px */
-    const boxWidth = twBox.clientWidth - 28; /* trừ padding 14px*2 */
-    const TW_MAX_CHARS = Math.floor(boxWidth / charWidth);
-
-    twTimer = setInterval(() => {
-        if (twIndex < twStr.length) {
-            twText.textContent += twStr[twIndex];
-            twIndex++;
-            /* chỉ cuộn khi đã vượt quá chiều dài khung */
-            if (twText.textContent.length > TW_MAX_CHARS) {
-                twText.textContent = twText.textContent.slice(
-                    twText.textContent.length - TW_MAX_CHARS
-                );
+        // Gắn Emin label vào 1/3 tòa nhà mới (cao ốc)
+        (function attachEminLabels() {
+            // Re-scan và thêm label sau khi city đã build
+            // Vì city group chứa nhiều mesh, ta build một pass riêng
+            // Spawn thêm label objects tại vị trí cao ốc đã tạo
+            const usedPositions = [];
+            for (let i = 0; i < 800; i++) {
+                const x = (Math.random() - 0.5) * 1400;
+                const z = (Math.random() - 0.5) * 1400;
+                const dist = Math.sqrt(x * x + z * z);
+                if (dist < 160) continue;
+                if (x > 250 || z > 250) {
+                    if (Math.random() < 0.35) {
+                        const h = 80 + Math.random() * 120;
+                        const w = 20 + Math.random() * 10;
+                        const d = 20 + Math.random() * 10;
+                        addEminLabel(x, z, h, w, d);
+                    }
+                }
             }
-        } else {
-            clearInterval(twTimer);
+        })();
+
+        // ============================================================
+        // --- CAMERA DRONE FLIGHT SYSTEM ---
+        // ============================================================
+
+        // Khu vực OLD (x < 250 và z < 250)
+        const OLD_ZONE = { minX: -700, maxX: 249, minZ: -700, maxZ: 249 };
+
+        // Waypoint system cho chế độ lướt thấp khu OLD
+        let droneWaypoints = [];
+        let droneWpIdx = 0;
+        let droneWpProgress = 0;
+
+        function generateOldZoneWaypoints(count) {
+            const pts = [];
+            for (let i = 0; i < count; i++) {
+                let x, z, tries = 0;
+                do {
+                    x = OLD_ZONE.minX + Math.random() * (OLD_ZONE.maxX - OLD_ZONE.minX);
+                    z = OLD_ZONE.minZ + Math.random() * (OLD_ZONE.maxZ - OLD_ZONE.minZ);
+                    tries++;
+                } while (Math.sqrt(x*x+z*z) < 170 && tries < 30);
+                // Độ cao lướt thấp ngẫu nhiên: 10-30
+                const y = 10 + Math.random() * 20;
+                pts.push(new THREE.Vector3(x, y, z));
+            }
+            return pts;
         }
-    }, 120);
-}
-function stopTypewriter() {
-    clearInterval(twTimer);
-    twText.textContent = '';
-    twBox.style.display = 'none';
-}
 
-document.querySelectorAll('.btn-sm[data-tw]').forEach(btn => {
-    btn.addEventListener('mouseenter', () => startTypewriter(btn.dataset.tw));
-    btn.addEventListener('mouseleave', stopTypewriter);
-});
+        // Trạng thái camera
+        // PHASES: HIGH_ORBIT → DESCEND → LOW_GLIDE (5 vòng) → ASCEND → HIGH_OVERVIEW → DESCEND → ...
+        let camPhase = 'HIGH_ORBIT';
+        let phaseTimer = 0;
+        let orbitAngle = 0;
+        let orbitLaps = 0;          // đếm số lần lap HIGH_ORBIT
+        let lowGlideLaps = 0;       // đếm vòng lướt thấp
+        let lowGlideTimer = 0;
+        let lowGlideSegCount = 0;   // số segment đã đi (mỗi ~3-5 segment = 1 "vòng")
 
+        // Waypoints cho khu old
+        droneWaypoints = generateOldZoneWaypoints(40);
+        droneWpIdx = 0;
+        droneWpProgress = 0;
 
+        // Vị trí camera hiện tại (để lerp mượt)
+        const camPos = new THREE.Vector3(0, 700, 0);
+        const camTarget = new THREE.Vector3(0, 0, 0);
 
+        // HIGH_OVERVIEW: danh sách các vị trí cao ốc để zoom qua
+        const overviewTargets = [
+            new THREE.Vector3(400, 0, 400),
+            new THREE.Vector3(-400, 0, 400),
+            new THREE.Vector3(400, 0, -300),
+            new THREE.Vector3(-350, 0, -350),
+            new THREE.Vector3(500, 0, -200),
+        ];
+        let overviewIdx = 0;
+        let overviewTimer = 0;
 
+        function animate() {
+            requestAnimationFrame(animate);
+            phaseTimer++;
 
+            // ---- HIGH_ORBIT: bay vòng cao nhìn xuống toàn cảnh ----
+            if (camPhase === 'HIGH_ORBIT') {
+                orbitAngle += 0.004;
+                const r = 850;
+                const targetPos = new THREE.Vector3(
+                    Math.sin(orbitAngle) * r,
+                    560 + Math.sin(orbitAngle * 0.3) * 80,
+                    Math.cos(orbitAngle) * r
+                );
+                camPos.lerp(targetPos, 0.04);
+                camTarget.lerp(new THREE.Vector3(0, 50, 0), 0.05);
+                camera.position.copy(camPos);
+                camera.lookAt(camTarget);
 
+                // Sau ~1 vòng → bắt đầu xuống
+                if (orbitAngle > Math.PI * 2) {
+                    orbitAngle = 0;
+                    camPhase = 'DESCEND';
+                    phaseTimer = 0;
+                    droneWaypoints = generateOldZoneWaypoints(40);
+                    droneWpIdx = 0;
+                    droneWpProgress = 0;
+                    lowGlideSegCount = 0;
+                }
+            }
 
+            // ---- DESCEND: lao xuống khu old ----
+            else if (camPhase === 'DESCEND') {
+                const firstWp = droneWaypoints[0];
+                const approachPos = new THREE.Vector3(firstWp.x, 15, firstWp.z);
+                camPos.lerp(approachPos, 0.025);
+                camTarget.lerp(droneWaypoints[1] || firstWp, 0.03);
+                camera.position.copy(camPos);
+                camera.lookAt(camTarget);
 
-/* ── Loop ── */
-function loop(){
-    ctx.clearRect(0,0,W(),H());
-    drawDots();
-    drawClickFX();
-    drones.forEach(d=>{ d.update(); updateStatus(d); d.draw(); });
-    updateClock();
-    requestAnimationFrame(loop);
-}
-loop();
+                if (camPos.distanceTo(approachPos) < 30) {
+                    camPhase = 'LOW_GLIDE';
+                    phaseTimer = 0;
+                }
+            }
 
+            // ---- LOW_GLIDE: lướt thấp khu old, rẽ ngẫu nhiên ----
+            else if (camPhase === 'LOW_GLIDE') {
+                droneWpProgress += 0.003;
 
+                if (droneWpProgress >= 1) {
+                    droneWpProgress = 0;
+                    droneWpIdx++;
+                    lowGlideSegCount++;
 
+                    // Sau ~5 vòng (mỗi vòng ~8 segment) thì bay lên
+                    if (lowGlideSegCount >= 40) {
+                        lowGlideSegCount = 0;
+                        camPhase = 'ASCEND';
+                        phaseTimer = 0;
+                    } else if (droneWpIdx >= droneWaypoints.length - 1) {
+                        // Hết waypoint thì gen mới
+                        droneWaypoints = generateOldZoneWaypoints(40);
+                        droneWpIdx = 0;
+                    }
+                }
 
+                const wpA = droneWaypoints[droneWpIdx];
+                const wpB = droneWaypoints[Math.min(droneWpIdx + 1, droneWaypoints.length - 1)];
+                const wpC = droneWaypoints[Math.min(droneWpIdx + 2, droneWaypoints.length - 1)];
 
+                // Interpolate mượt (catmull-rom đơn giản với lerp)
+                const t = droneWpProgress;
+                const currentPos = new THREE.Vector3().lerpVectors(wpA, wpB, t);
+                // Nhấp nhô thêm để giống bay lướt
+                currentPos.y += Math.sin(t * Math.PI * 2 + phaseTimer * 0.05) * 3;
 
-</script>
+                camPos.lerp(currentPos, 0.03);
+                const lookAheadPos = new THREE.Vector3().lerpVectors(wpB, wpC, t);
+                lookAheadPos.y = currentPos.y - 2; // nhìn hơi cúi
+                camTarget.lerp(lookAheadPos, 0.03);
+
+                camera.position.copy(camPos);
+                camera.lookAt(camTarget);
+            }
+
+            // ---- ASCEND: bay lên cao lại ----
+            else if (camPhase === 'ASCEND') {
+                const highPos = new THREE.Vector3(
+                    camPos.x * 0.3 + Math.sin(phaseTimer * 0.01) * 600,
+                    700,
+                    camPos.z * 0.3 + Math.cos(phaseTimer * 0.01) * 600
+                );
+                camPos.lerp(highPos, 0.02);
+                camTarget.lerp(new THREE.Vector3(0, 0, 0), 0.02);
+                camera.position.copy(camPos);
+                camera.lookAt(camTarget);
+
+                if (camPos.y > 500) {
+                    camPhase = 'HIGH_OVERVIEW';
+                    phaseTimer = 0;
+                    overviewIdx = 0;
+                    overviewTimer = 0;
+                }
+            }
+
+            // ---- HIGH_OVERVIEW: lượn cao qua các tòa cao ốc ----
+            else if (camPhase === 'HIGH_OVERVIEW') {
+                overviewTimer++;
+
+                const target = overviewTargets[overviewIdx % overviewTargets.length];
+                const viewPos = new THREE.Vector3(
+                    target.x + Math.sin(overviewTimer * 0.006) * 300,
+                    350 + Math.sin(overviewTimer * 0.008) * 100,
+                    target.z + Math.cos(overviewTimer * 0.006) * 300
+                );
+                camPos.lerp(viewPos, 0.008);
+                camTarget.lerp(new THREE.Vector3(target.x, 80, target.z), 0.02);
+                camera.position.copy(camPos);
+                camera.lookAt(camTarget);
+
+                // Mỗi 4 giây chuyển target cao ốc tiếp theo, sau 5 target thì về orbit
+                if (overviewTimer % 321 === 0) {
+                    overviewIdx++;
+                    if (overviewIdx >= overviewTargets.length) {
+                        camPhase = 'HIGH_ORBIT';
+                        phaseTimer = 0;
+                        orbitAngle = 0;
+                    }
+                }
+            }
+
+            // Ruby pulsate
+            const rubyPulse = 0.4 + Math.sin(Date.now() * 0.003) * 0.35;
+            for (let rm of rubyMeshes) {
+                rm.material.emissiveIntensity = rubyPulse;
+            }
+
+            updateTraffic();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
 </body>
 </html>

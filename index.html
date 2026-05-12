@@ -22,9 +22,10 @@
         scene.fog = new THREE.FogExp2(0xa5e1ff, 0.001);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        // Cap pixel ratio at 1.5 to avoid 4x render cost on Retina/HiDPI screens
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         document.body.appendChild(renderer.domElement);
 
         // Ánh sáng mặt trời mạnh hơn để làm rõ chi tiết
@@ -80,6 +81,14 @@
         const city = new THREE.Group();
         const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 
+        // Shared material cache to cut draw calls & GPU state switches
+        const _matCache = {};
+        function cachedPhong(params) {
+            const key = JSON.stringify(params);
+            if (!_matCache[key]) _matCache[key] = new THREE.MeshPhongMaterial(params);
+            return _matCache[key];
+        }
+
         function addBuilding(x, z, type) {
     let h, w, d, color;
     if (type === 'old') {
@@ -94,7 +103,7 @@
             const rLen = w * 1.8;
             const rRad = h * 0.18;
             const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(rRad, rRad, rLen, 12),
+                new THREE.CylinderGeometry(rRad, rRad, rLen, 8),
                 new THREE.MeshPhongMaterial({ color: 0xd4b483 })
             );
             body.rotation.z = Math.PI / 2;
@@ -104,7 +113,7 @@
             const bandColors = [0xcc0000, 0xff6600, 0xffcc00, 0x336600, 0x000099, 0x999999, 0xffffff, 0x000000];
             for (let b = 0; b < 4; b++) {
                 const band = new THREE.Mesh(
-                    new THREE.CylinderGeometry(rRad + 0.3, rRad + 0.3, rLen * 0.07, 12),
+                    new THREE.CylinderGeometry(rRad + 0.3, rRad + 0.3, rLen * 0.07, 8),
                     new THREE.MeshPhongMaterial({ color: bandColors[Math.floor(Math.random() * bandColors.length)] })
                 );
                 band.rotation.z = Math.PI / 2;
@@ -127,7 +136,7 @@
             const dRad = h * 0.15;
 
             const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(dRad, dRad, dLen, 12),
+                new THREE.CylinderGeometry(dRad, dRad, dLen, 8),
                 new THREE.MeshPhongMaterial({ color: 0x111111 })
             );
             body.rotation.z = Math.PI / 2;
@@ -135,7 +144,7 @@
             city.add(body);
 
             const stripe = new THREE.Mesh(
-                new THREE.CylinderGeometry(dRad + 0.3, dRad + 0.3, dLen * 0.1, 12),
+                new THREE.CylinderGeometry(dRad + 0.3, dRad + 0.3, dLen * 0.1, 8),
                 new THREE.MeshPhongMaterial({ color: 0xffffff })
             );
             stripe.rotation.z = Math.PI / 2;
@@ -167,7 +176,7 @@
 
             for (let c = 0; c < 8; c++) {
                 const ring = new THREE.Mesh(
-                    new THREE.TorusGeometry(iRad, iRad * 0.28, 8, 16),
+                    new THREE.TorusGeometry(iRad, iRad * 0.28, 6, 10),
                     coilMat
                 );
                 ring.rotation.y = Math.PI / 2;
@@ -264,7 +273,7 @@
             const tH   = h * 0.5;
 
             const tBody = new THREE.Mesh(
-                new THREE.CylinderGeometry(tRad, tRad, tH, 16),
+                new THREE.CylinderGeometry(tRad, tRad, tH, 10),
                 new THREE.MeshPhongMaterial({ color: 0x222222, shininess: 60 })
             );
             tBody.position.set(x, tH / 2 + 1, z);
@@ -326,7 +335,7 @@
             city.add(heatsink);
 
             const hole = new THREE.Mesh(
-                new THREE.CylinderGeometry(mW * 0.07, mW * 0.07, mD * 0.35, 8),
+                new THREE.CylinderGeometry(mW * 0.07, mW * 0.07, mD * 0.35, 6),
                 new THREE.MeshPhongMaterial({ color: 0x333333 })
             );
             hole.rotation.x = Math.PI / 2;
@@ -496,7 +505,7 @@
 
         // Tạo hồ nước
         const lake = new THREE.Mesh(
-            new THREE.CircleGeometry(150, 32),
+            new THREE.CircleGeometry(150, 24),
             new THREE.MeshPhongMaterial({ color: 0x224466, shininess: 100 })
         );
         lake.rotation.x = -Math.PI / 2;
@@ -504,7 +513,7 @@
         scene.add(lake);
 
         // Rải nhà theo quy hoạch
-        for (let i = 0; i < 800; i++) {
+        for (let i = 0; i < 500; i++) {
             const x = (Math.random() - 0.5) * 1400;
             const z = (Math.random() - 0.5) * 1400;
             const dist = Math.sqrt(x*x + z*z);
@@ -530,7 +539,7 @@
             const trunkR = 0.8 + Math.random() * 0.5;
             const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5c3a1e });
             const trunk = new THREE.Mesh(
-                new THREE.CylinderGeometry(trunkR * 0.6, trunkR, trunkH, 7),
+                new THREE.CylinderGeometry(trunkR * 0.6, trunkR, trunkH, 6),
                 trunkMat
             );
             trunk.position.set(x, trunkH / 2, z);
@@ -547,7 +556,7 @@
                 const layerR = (3.5 - i * 0.7) + Math.random() * 1.2;
                 const layerH = (5 + Math.random() * 3) - i * 0.5;
                 const cone = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.1, layerR, layerH, 8),
+                    new THREE.CylinderGeometry(0.1, layerR, layerH, 6),
                     leafMat
                 );
                 cone.position.set(x, trunkH + i * (layerH * 0.55), z);
@@ -637,7 +646,7 @@
                 nature.add(rubyGroup);
 
                 // Ánh sáng đỏ nhỏ từ ruby
-                if (r % 3 === 0) {
+                if (r % 5 === 0) {
                     const rubyLight = new THREE.PointLight(0xff0033, 0.8, 40);
                     rubyLight.position.set(rx, ry + 2, rz);
                     nature.add(rubyLight);
@@ -695,7 +704,7 @@
         }
 
         // Rải cụm cây dày hơn ở vùng biên giữa 2 khu (khoảng x=200-350, z=200-350)
-        for (let i = 0; i < 120; i++) {
+        for (let i = 0; i < 60; i++) {
             const jx = 150 + Math.random() * 250 - (Math.random() < 0.5 ? 350 : 0);
             const jz = 150 + Math.random() * 250 - (Math.random() < 0.5 ? 350 : 0);
             if (isGoodNatureSpot(jx, jz)) {
@@ -705,7 +714,7 @@
 
         // Rải vách núi có ruby: ưu tiên khu biên ngoài và góc bản đồ
         const cliffSpots = [];
-        for (let i = 0; i < 55; i++) {
+        for (let i = 0; i < 30; i++) {
             let cx, cz;
             // Phân bố: 60% ở ngoại ô (r=450-650), 40% ở trong (r=200-450)
             if (Math.random() < 0.6) {
@@ -771,7 +780,7 @@
             group.add(windshield);
 
             // Bánh xe (4 cái)
-            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.7, 12);
+            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.7, 8);
             const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
             [[-2.5, 0, 2], [2.5, 0, 2], [-2.5, 0, -2], [2.5, 0, -2]].forEach(([wx, wy, wz]) => {
                 const wheel = new THREE.Mesh(wheelGeo, wheelMat);
@@ -847,7 +856,7 @@
 
             // Đầu người lái
             const riderHead = new THREE.Mesh(
-                new THREE.SphereGeometry(0.55, 8, 8),
+                new THREE.SphereGeometry(0.55, 6, 6),
                 new THREE.MeshPhongMaterial({ color: 0xff9966 })
             );
             riderHead.position.set(-0.1, 5.8, 0);
@@ -855,14 +864,14 @@
 
             // Mũ bảo hiểm
             const helmet = new THREE.Mesh(
-                new THREE.SphereGeometry(0.65, 8, 6),
+                new THREE.SphereGeometry(0.65, 7, 5),
                 new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 200 })
             );
             helmet.position.set(-0.1, 5.85, 0);
             group.add(helmet);
 
             // Bánh xe
-            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.5, 12);
+            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.5, 8);
             const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
             [2, -2].forEach(wx => {
                 const wheel = new THREE.Mesh(wheelGeo, wheelMat);
@@ -915,7 +924,7 @@
 
             // Đầu
             const head = new THREE.Mesh(
-                new THREE.SphereGeometry(0.45, 8, 8),
+                new THREE.SphereGeometry(0.45, 6, 6),
                 new THREE.MeshPhongMaterial({ color: skin })
             );
             head.position.y = 3.35;
@@ -1178,7 +1187,7 @@
             // Vì city group chứa nhiều mesh, ta build một pass riêng
             // Spawn thêm label objects tại vị trí cao ốc đã tạo
             const usedPositions = [];
-            for (let i = 0; i < 800; i++) {
+            for (let i = 0; i < 300; i++) {
                 const x = (Math.random() - 0.5) * 1400;
                 const z = (Math.random() - 0.5) * 1400;
                 const dist = Math.sqrt(x * x + z * z);
@@ -1383,8 +1392,8 @@
                 }
             }
 
-            // Ruby pulsate
-            const rubyPulse = 0.4 + Math.sin(Date.now() * 0.003) * 0.35;
+            // Ruby pulsate — use phaseTimer to avoid Date.now() overhead
+            const rubyPulse = 0.4 + Math.sin(phaseTimer * 0.03) * 0.35;
             for (let rm of rubyMeshes) {
                 rm.material.emissiveIntensity = rubyPulse;
             }

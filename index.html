@@ -471,18 +471,70 @@
             return new THREE.CanvasTexture(cv);
         }
 
+        // --- CANVAS TEXTURE cửa sổ cao ốc cho mặt trơn ---
+        function makeWindowTexture(bgColor) {
+            const cv = document.createElement('canvas');
+            cv.width = 256; cv.height = 512;
+            const ctx = cv.getContext('2d');
+
+            const hexStr = '#' + bgColor.toString(16).padStart(6, '0');
+            ctx.fillStyle = hexStr;
+            ctx.fillRect(0, 0, 256, 512);
+
+            // Lưới cửa sổ: 3 cột x 9 hàng
+            const cols = 3, rows = 9;
+            const padX = 16, padY = 28;
+            const cellW = (256 - padX * 2) / cols;
+            const cellH = (512 - padY * 2) / rows;
+            const winW = cellW * 0.60;
+            const winH = cellH * 0.52;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cx = padX + c * cellW + (cellW - winW) / 2;
+                    const cy = padY + r * cellH + (cellH - winH) / 2;
+                    // Sáng/tối theo seed giả ngẫu nhiên (nhất quán mỗi tòa)
+                    const lit = ((r * 3 + c) * 7 + (bgColor & 0xff)) % 5 !== 0;
+                    if (lit) {
+                        // Cửa sổ sáng xanh
+                        ctx.fillStyle = '#88ccee';
+                        ctx.fillRect(cx, cy, winW, winH);
+                        // Viền sáng
+                        ctx.fillStyle = 'rgba(255,255,255,0.40)';
+                        ctx.fillRect(cx, cy, winW, 2);
+                        ctx.fillRect(cx, cy, 2, winH);
+                        // Thanh dọc giữa
+                        ctx.fillStyle = 'rgba(0,60,100,0.55)';
+                        ctx.fillRect(cx + winW / 2 - 1, cy, 2, winH);
+                        // Thanh ngang giữa
+                        ctx.fillRect(cx, cy + winH / 2 - 1, winW, 2);
+                    } else {
+                        // Cửa sổ tối
+                        ctx.fillStyle = '#0e1822';
+                        ctx.fillRect(cx, cy, winW, winH);
+                        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+                        ctx.fillRect(cx, cy, winW, 1.5);
+                    }
+                }
+            }
+
+            return new THREE.CanvasTexture(cv);
+        }
+
         const frontTex = makeCapTexture(color, ufLabel, vLabel);
         const sideTex  = makeMinusSideTexture(color);
+        const winTex   = makeWindowTexture(color);
         const plainMat = new THREE.MeshPhongMaterial({ color: color, shininess: 40 });
+        const winMat3d = new THREE.MeshPhongMaterial({ map: winTex, shininess: 80 });
 
         // BoxGeometry mặt: +X, -X, +Y, -Y, +Z(front), -Z
         const materials = [
             new THREE.MeshPhongMaterial({ map: sideTex }),   // +X (mặt bên - dấu trừ)
-            plainMat,                                          // -X
+            winMat3d,                                          // -X (cửa sổ)
             plainMat,                                          // +Y (đỉnh)
             plainMat,                                          // -Y (đáy)
             new THREE.MeshPhongMaterial({ map: frontTex }),  // +Z (mặt trước - chữ uF)
-            plainMat,                                          // -Z
+            winMat3d,                                          // -Z (cửa sổ)
         ];
 
         const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials);

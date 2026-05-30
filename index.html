@@ -1,1466 +1,759 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Hanoi High-Detail Simulation</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #a5e1ff; }
-        #info {
-            position: absolute; top: 10px; left: 10px;
-            background: rgba(0,0,0,0.7); color: #00ffcc;
-            padding: 10px; font-family: monospace; border-left: 4px solid #fff;
-        }
-    </style>
-</head>
-<body>
-    <div id="info">LOCATION: HANOI_CITY | SCAN_MODE: HIGH_RES</div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-    <script>
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xa5e1ff);
-        scene.fog = new THREE.FogExp2(0xa5e1ff, 0.001);
-
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        // Cap pixel ratio at 1.5 to avoid 4x render cost on Retina/HiDPI screens
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        document.body.appendChild(renderer.domElement);
-
-        // Ánh sáng mặt trời mạnh hơn để làm rõ chi tiết
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(100, 500, 100);
-        scene.add(sun);
-
-        // --- HÀM VẼ ĐƯỜNG PHỐ CHI TIẾT (CANVAS TEXTURE) ---
-        function createRoadTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-
-            // Nền nhựa đường xám đậm
-            ctx.fillStyle = '#333333';
-            ctx.fillRect(0, 0, 512, 512);
-
-            // Vạch kẻ tim đường (đứt đoạn)
-            ctx.strokeStyle = '#ffffff';
-            ctx.setLineDash([20, 20]);
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(256, 0); ctx.lineTo(256, 512);
-            ctx.moveTo(0, 256); ctx.lineTo(512, 256);
-            ctx.stroke();
-
-            // Vạch đi bộ (Zebra crossing) tại ngã tư
-            ctx.setLineDash([]);
-            ctx.fillStyle = '#ffffff';
-            for(let i=0; i<6; i++) {
-                ctx.fillRect(230 + i*8, 180, 4, 30); // Ngang
-                ctx.fillRect(180, 230 + i*8, 30, 4); // Dọc
-            }
-
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        const roadTex = createRoadTexture();
-        roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
-        roadTex.repeat.set(10, 10);
-
-        // --- XÂY DỰNG MẶT ĐẤT ---
-        const ground = new THREE.Mesh(
-            new THREE.PlaneGeometry(2000, 2000),
-            new THREE.MeshLambertMaterial({ map: roadTex })
-        );
-        ground.rotation.x = -Math.PI / 2;
-        scene.add(ground);
-
-        // --- PHÂN KHU HÀ NỘI ---
-        const city = new THREE.Group();
-        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-
-        // Shared material cache to cut draw calls & GPU state switches
-        const _matCache = {};
-        function cachedPhong(params) {
-            const key = JSON.stringify(params);
-            if (!_matCache[key]) _matCache[key] = new THREE.MeshPhongMaterial(params);
-            return _matCache[key];
-        }
-
-        function addBuilding(x, z, type) {
-    let h, w, d, color;
-    if (type === 'old') {
-        h = 25 + Math.random() * 30;
-        w = 14 + Math.random() * 8;
-        d = 20 + Math.random() * 12;
-
-        const componentType = Math.floor(Math.random() * 9);
-
-        if (componentType === 0) {
-            // ===== ĐIỆN TRỞ =====
-            const rLen = w * 1.8;
-            const rRad = h * 0.18;
-            const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(rRad, rRad, rLen, 8),
-                new THREE.MeshPhongMaterial({ color: 0xd4b483 })
-            );
-            body.rotation.z = Math.PI / 2;
-            body.position.set(x, rRad + 1, z);
-            city.add(body);
-
-            const bandColors = [0xcc0000, 0xff6600, 0xffcc00, 0x336600, 0x000099, 0x999999, 0xffffff, 0x000000];
-            for (let b = 0; b < 4; b++) {
-                const band = new THREE.Mesh(
-                    new THREE.CylinderGeometry(rRad + 0.3, rRad + 0.3, rLen * 0.07, 8),
-                    new THREE.MeshPhongMaterial({ color: bandColors[Math.floor(Math.random() * bandColors.length)] })
-                );
-                band.rotation.z = Math.PI / 2;
-                band.position.set(x - rLen * 0.3 + b * rLen * 0.2, rRad + 1, z);
-                city.add(band);
-            }
-
-            [-rLen * 0.52, rLen * 0.52].forEach(ox => {
-                const leg = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, rRad + 1, 6),
-                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
-                );
-                leg.position.set(x + ox, (rRad + 1) / 2, z);
-                city.add(leg);
-            });
-
-        } else if (componentType === 1) {
-            // ===== DIODE =====
-            const dLen = w * 1.4;
-            const dRad = h * 0.15;
-
-            const body = new THREE.Mesh(
-                new THREE.CylinderGeometry(dRad, dRad, dLen, 8),
-                new THREE.MeshPhongMaterial({ color: 0x111111 })
-            );
-            body.rotation.z = Math.PI / 2;
-            body.position.set(x, dRad + 1, z);
-            city.add(body);
-
-            const stripe = new THREE.Mesh(
-                new THREE.CylinderGeometry(dRad + 0.3, dRad + 0.3, dLen * 0.1, 8),
-                new THREE.MeshPhongMaterial({ color: 0xffffff })
-            );
-            stripe.rotation.z = Math.PI / 2;
-            stripe.position.set(x + dLen * 0.38, dRad + 1, z);
-            city.add(stripe);
-
-            [-dLen * 0.55, dLen * 0.55].forEach(ox => {
-                const leg = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, dRad + 1, 6),
-                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
-                );
-                leg.position.set(x + ox, (dRad + 1) / 2, z);
-                city.add(leg);
-            });
-
-        } else if (componentType === 2) {
-            // ===== CUỘN CẢM =====
-            const iRad = h * 0.12;
-            const iLen = w * 1.6;
-            const coilMat = new THREE.MeshPhongMaterial({ color: 0xcc8800, shininess: 180 });
-
-            const core = new THREE.Mesh(
-                new THREE.CylinderGeometry(iRad * 0.5, iRad * 0.5, iLen * 0.9, 10),
-                new THREE.MeshPhongMaterial({ color: 0x444444 })
-            );
-            core.rotation.z = Math.PI / 2;
-            core.position.set(x, iRad + 1, z);
-            city.add(core);
-
-            for (let c = 0; c < 8; c++) {
-                const ring = new THREE.Mesh(
-                    new THREE.TorusGeometry(iRad, iRad * 0.28, 6, 10),
-                    coilMat
-                );
-                ring.rotation.y = Math.PI / 2;
-                ring.position.set(x - iLen * 0.42 + c * (iLen * 0.85 / 7), iRad + 1, z);
-                city.add(ring);
-            }
-
-            [-iLen * 0.48, iLen * 0.48].forEach(ox => {
-                const leg = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, iRad + 1, 6),
-                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
-                );
-                leg.position.set(x + ox, (iRad + 1) / 2, z);
-                city.add(leg);
-            });
-
-        } else if (componentType === 3) {
-            // ===== TỤ XANH LÁ (cây xanh) =====
-            const ch = h * 1.2;
-            const cw = w * 0.5;
-
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(cw, ch, cw),
-                new THREE.MeshPhongMaterial({ color: 0x2d7a2d, shininess: 30 })
-            );
-            body.position.set(x, ch / 2, z);
-            city.add(body);
-
-            const strip = new THREE.Mesh(
-                new THREE.BoxGeometry(cw + 0.3, ch * 0.07, cw + 0.3),
-                new THREE.MeshPhongMaterial({ color: 0x88cc88 })
-            );
-            strip.position.set(x, ch * 0.82, z);
-            city.add(strip);
-
-            [-cw * 0.28, cw * 0.28].forEach(ox => {
-                const leg = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.35, 0.35, ch * 0.25, 6),
-                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
-                );
-                leg.position.set(x + ox, -(ch * 0.125), z);
-                city.add(leg);
-            });
-
-        } else if (componentType === 4) {
-            // ===== TỤ GỐM XANH =====
-            const ch = h * 0.7;
-            const cw = w * 0.55;
-
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(cw * 1.4, ch * 0.4, cw),
-                new THREE.MeshPhongMaterial({ color: 0x3399cc, shininess: 80 })
-            );
-            body.position.set(x, ch * 0.4 + 1, z);
-            city.add(body);
-
-            [-cw * 0.32, cw * 0.32].forEach(ox => {
-                const leg = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.4, 0.4, ch * 0.35, 6),
-                    new THREE.MeshPhongMaterial({ color: 0xbbbbbb })
-                );
-                leg.position.set(x + ox, ch * 0.175, z);
-                city.add(leg);
-            });
-
-        } else if (componentType === 5) {
-            // ===== NHÀ PHỐ CỔ XÁM =====
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(w, h, d),
-                new THREE.MeshPhongMaterial({ color: 0x888888 })
-            );
-            body.position.set(x, h / 2, z);
-            city.add(body);
-
-            const roof = new THREE.Mesh(
-                new THREE.BoxGeometry(w + 1.5, 3, d + 1.5),
-                new THREE.MeshLambertMaterial({ color: 0xcc3300 })
-            );
-            roof.position.set(x, h + 1.5, z);
-            city.add(roof);
-
-            const winMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, shininess: 200 });
-            for (let row = 0; row < 3; row++) {
-                for (let col = -1; col <= 1; col++) {
-                    const win = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, h * 0.1, 0.5), winMat);
-                    win.position.set(x + col * w * 0.3, h * 0.25 + row * h * 0.28, z + d / 2 + 0.1);
-                    city.add(win);
-                }
-            }
-
-        } else if (componentType === 6) {
-            // ===== TRANSISTOR BJT (TO-92) =====
-            const tRad = h * 0.22;
-            const tH   = h * 0.5;
-
-            const tBody = new THREE.Mesh(
-                new THREE.CylinderGeometry(tRad, tRad, tH, 10),
-                new THREE.MeshPhongMaterial({ color: 0x222222, shininess: 60 })
-            );
-            tBody.position.set(x, tH / 2 + 1, z);
-            city.add(tBody);
-
-            const flatFace = new THREE.Mesh(
-                new THREE.BoxGeometry(tRad * 2.05, tH, 0.6),
-                new THREE.MeshPhongMaterial({ color: 0x444444 })
-            );
-            flatFace.position.set(x, tH / 2 + 1, z + tRad);
-            city.add(flatFace);
-
-            const bjt_labels = ['NPN', 'PNP', 'BC547', 'BC557', 'S9013', '2N2222'];
-            const bjt_label = bjt_labels[Math.floor(Math.random() * bjt_labels.length)];
-            (function() {
-                const cv = document.createElement('canvas');
-                cv.width = 128; cv.height = 256;
-                const c = cv.getContext('2d');
-                c.fillStyle = '#333333'; c.fillRect(0, 0, 128, 256);
-                c.fillStyle = '#ffffff'; c.font = 'bold 28px monospace'; c.textAlign = 'center';
-                c.fillText(bjt_label, 64, 115);
-                c.font = '18px monospace'; c.fillStyle = '#aaffaa';
-                c.fillText('BJT', 64, 155);
-                const labelMesh = new THREE.Mesh(
-                    new THREE.PlaneGeometry(tRad * 1.6, tH * 0.7),
-                    new THREE.MeshPhongMaterial({ map: new THREE.CanvasTexture(cv), transparent: true })
-                );
-                labelMesh.position.set(x, tH / 2 + 1, z + tRad + 0.35);
-                city.add(labelMesh);
-            })();
-
-            [-tRad * 0.6, 0, tRad * 0.6].forEach((ox, i) => {
-                const pin = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.35, 0.35, tH * 0.55, 6),
-                    new THREE.MeshPhongMaterial({ color: i === 1 ? 0xddaa00 : 0xbbbbbb, shininess: 180 })
-                );
-                pin.position.set(x + ox, -(tH * 0.275), z);
-                city.add(pin);
-            });
-
-        } else if (componentType === 7) {
-            // ===== MOSFET (TO-220) =====
-            const mW = w * 0.55;
-            const mH = h * 0.55;
-            const mD = d * 0.35;
-
-            const mBody = new THREE.Mesh(
-                new THREE.BoxGeometry(mW, mH, mD),
-                new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 20 })
-            );
-            mBody.position.set(x, mH / 2 + 1, z);
-            city.add(mBody);
-
-            const heatsink = new THREE.Mesh(
-                new THREE.BoxGeometry(mW * 1.1, mH * 1.05, mD * 0.3),
-                new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 200 })
-            );
-            heatsink.position.set(x, mH / 2 + 1, z - mD * 0.65);
-            city.add(heatsink);
-
-            const hole = new THREE.Mesh(
-                new THREE.CylinderGeometry(mW * 0.07, mW * 0.07, mD * 0.35, 6),
-                new THREE.MeshPhongMaterial({ color: 0x333333 })
-            );
-            hole.rotation.x = Math.PI / 2;
-            hole.position.set(x, mH * 0.85, z - mD * 0.65);
-            city.add(hole);
-
-            const mos_labels = ['IRF540', 'IRF3205', 'IRFZ44N', 'BS170', 'FQP30N06'];
-            const mos_label = mos_labels[Math.floor(Math.random() * mos_labels.length)];
-            (function() {
-                const cv = document.createElement('canvas');
-                cv.width = 256; cv.height = 256;
-                const c = cv.getContext('2d');
-                c.fillStyle = '#111111'; c.fillRect(0, 0, 256, 256);
-                c.fillStyle = '#ffffff'; c.font = 'bold 32px monospace'; c.textAlign = 'center';
-                c.fillText(mos_label, 128, 100);
-                c.font = '20px monospace'; c.fillStyle = '#00ccff';
-                c.fillText('N-MOSFET', 128, 148);
-                c.fillStyle = '#ffaa00'; c.font = '18px monospace';
-                c.fillText('G   D   S', 128, 195);
-                const mosLabel = new THREE.Mesh(
-                    new THREE.PlaneGeometry(mW * 0.85, mH * 0.65),
-                    new THREE.MeshPhongMaterial({ map: new THREE.CanvasTexture(cv), transparent: true })
-                );
-                mosLabel.position.set(x, mH / 2 + 1, z + mD / 2 + 0.1);
-                city.add(mosLabel);
-            })();
-
-            [-mW * 0.28, 0, mW * 0.28].forEach((ox, i) => {
-                const pin = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.38, 0.38, mH * 0.5, 6),
-                    new THREE.MeshPhongMaterial({ color: i === 0 ? 0xffcc00 : 0xbbbbbb, shininess: 180 })
-                );
-                pin.position.set(x + ox, -(mH * 0.25), z);
-                city.add(pin);
-            });
-
-        } else {
-            // ===== NHÀ PHỐ CỔ VÀNG =====
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(w, h, d),
-                new THREE.MeshPhongMaterial({ color: 0xffdb58 })
-            );
-            body.position.set(x, h / 2, z);
-            city.add(body);
-
-            const roof = new THREE.Mesh(
-                new THREE.BoxGeometry(w + 1.5, 3, d + 1.5),
-                new THREE.MeshLambertMaterial({ color: 0xcc3300 })
-            );
-            roof.position.set(x, h + 1.5, z);
-            city.add(roof);
-
-            const winMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, shininess: 200 });
-            for (let row = 0; row < 3; row++) {
-                for (let col = -1; col <= 1; col++) {
-                    const win = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, h * 0.1, 0.5), winMat);
-                    win.position.set(x + col * w * 0.3, h * 0.25 + row * h * 0.28, z + d / 2 + 0.1);
-                    city.add(win);
-                }
-            }
-        }
-    } else { // Cao ốc mới → TỤ ĐIỆN HỘP
-        h = 80 + Math.random() * 120;
-        w = 20 + Math.random() * 10;
-        d = 20 + Math.random() * 10;
-
-        const capColors = [0x111111, 0x4a0e8f, 0x0a3d6b, 0x7a3b1e];
-        const color = capColors[Math.floor(Math.random() * capColors.length)];
-
-        // Giá trị uF ngẫu nhiên
-        const ufValues = ['10µF', '22µF', '47µF', '100µF', '220µF', '470µF', '1000µF'];
-        const voltValues = ['16V', '25V', '35V', '50V', '63V'];
-        const ufLabel = ufValues[Math.floor(Math.random() * ufValues.length)];
-        const vLabel = voltValues[Math.floor(Math.random() * voltValues.length)];
-
-        // --- CANVAS TEXTURE cho mặt trước ---
-        function makeCapTexture(bgColor, uf, volt) {
-            const cv = document.createElement('canvas');
-            cv.width = 256; cv.height = 512;
-            const ctx = cv.getContext('2d');
-
-            // Nền màu thân tụ
-            const hexStr = '#' + bgColor.toString(16).padStart(6, '0');
-            ctx.fillStyle = hexStr;
-            ctx.fillRect(0, 0, 256, 512);
-
-            // Dải sáng trên đỉnh (cực +)
-            ctx.fillStyle = (bgColor === 0x111111) ? '#ffffff' : '#ffdd44';
-            ctx.fillRect(0, 20, 256, 40);
-
-            // Chữ uF - to, trắng/vàng
-            ctx.fillStyle = (bgColor === 0x111111) ? '#ffffff' : '#ffe680';
-            ctx.font = 'bold 72px monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText(uf, 128, 260);
-
-            // Chữ volt - nhỏ hơn
-            ctx.font = 'bold 44px monospace';
-            ctx.fillStyle = '#aaaaaa';
-            ctx.fillText(volt, 128, 330);
-
-            // Logo tụ (hình 2 đường song song)
-            ctx.strokeStyle = (bgColor === 0x111111) ? '#ffffff' : '#ffdd44';
-            ctx.lineWidth = 8;
-            ctx.beginPath(); ctx.moveTo(70, 390); ctx.lineTo(186, 390); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(70, 415); ctx.lineTo(186, 415); ctx.stroke();
-
-            return new THREE.CanvasTexture(cv);
-        }
-
-        // --- CANVAS TEXTURE cho mặt bên DẤU TRỪ ---
-        function makeMinusSideTexture(bgColor) {
-            const cv = document.createElement('canvas');
-            cv.width = 256; cv.height = 512;
-            const ctx = cv.getContext('2d');
-
-            const hexStr = '#' + bgColor.toString(16).padStart(6, '0');
-            ctx.fillStyle = hexStr;
-            ctx.fillRect(0, 0, 256, 512);
-
-            // Dải xám (cực -)
-            ctx.fillStyle = '#888888';
-            ctx.fillRect(0, 20, 256, 50);
-
-            // Dấu - lặp lại từ trên xuống
-            ctx.fillStyle = '#cccccc';
-            ctx.font = 'bold 52px monospace';
-            ctx.textAlign = 'center';
-            for (let i = 0; i < 6; i++) {
-                ctx.fillText('−  −  −', 128, 100 + i * 70);
-            }
-
-            return new THREE.CanvasTexture(cv);
-        }
-
-        // --- CANVAS TEXTURE cửa sổ cao ốc cho mặt trơn ---
-        function makeWindowTexture(bgColor) {
-            const cv = document.createElement('canvas');
-            cv.width = 256; cv.height = 512;
-            const ctx = cv.getContext('2d');
-
-            const hexStr = '#' + bgColor.toString(16).padStart(6, '0');
-            ctx.fillStyle = hexStr;
-            ctx.fillRect(0, 0, 256, 512);
-
-            // Lưới cửa sổ: 3 cột x 9 hàng
-            const cols = 3, rows = 9;
-            const padX = 16, padY = 28;
-            const cellW = (256 - padX * 2) / cols;
-            const cellH = (512 - padY * 2) / rows;
-            const winW = cellW * 0.60;
-            const winH = cellH * 0.52;
-
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const cx = padX + c * cellW + (cellW - winW) / 2;
-                    const cy = padY + r * cellH + (cellH - winH) / 2;
-                    // Sáng/tối theo seed giả ngẫu nhiên (nhất quán mỗi tòa)
-                    const lit = ((r * 3 + c) * 7 + (bgColor & 0xff)) % 5 !== 0;
-                    if (lit) {
-                        // Cửa sổ sáng xanh
-                        ctx.fillStyle = '#88ccee';
-                        ctx.fillRect(cx, cy, winW, winH);
-                        // Viền sáng
-                        ctx.fillStyle = 'rgba(255,255,255,0.40)';
-                        ctx.fillRect(cx, cy, winW, 2);
-                        ctx.fillRect(cx, cy, 2, winH);
-                        // Thanh dọc giữa
-                        ctx.fillStyle = 'rgba(0,60,100,0.55)';
-                        ctx.fillRect(cx + winW / 2 - 1, cy, 2, winH);
-                        // Thanh ngang giữa
-                        ctx.fillRect(cx, cy + winH / 2 - 1, winW, 2);
-                    } else {
-                        // Cửa sổ tối
-                        ctx.fillStyle = '#0e1822';
-                        ctx.fillRect(cx, cy, winW, winH);
-                        ctx.fillStyle = 'rgba(255,255,255,0.07)';
-                        ctx.fillRect(cx, cy, winW, 1.5);
-                    }
-                }
-            }
-
-            return new THREE.CanvasTexture(cv);
-        }
-
-        const frontTex = makeCapTexture(color, ufLabel, vLabel);
-        const sideTex  = makeMinusSideTexture(color);
-        const winTex   = makeWindowTexture(color);
-        const plainMat = new THREE.MeshPhongMaterial({ color: color, shininess: 40 });
-        const winMat3d = new THREE.MeshPhongMaterial({ map: winTex, shininess: 80 });
-
-        // BoxGeometry mặt: +X, -X, +Y, -Y, +Z(front), -Z
-        const materials = [
-            new THREE.MeshPhongMaterial({ map: sideTex }),   // +X (mặt bên - dấu trừ)
-            winMat3d,                                          // -X (cửa sổ)
-            plainMat,                                          // +Y (đỉnh)
-            plainMat,                                          // -Y (đáy)
-            new THREE.MeshPhongMaterial({ map: frontTex }),  // +Z (mặt trước - chữ uF)
-            winMat3d,                                          // -Z (cửa sổ)
-        ];
-
-        const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials);
-        body.position.set(x, h/2, z);
-        city.add(body);
-
-        // CHÂN TỤ TRÁI
-        const legGeo = new THREE.BoxGeometry(2, h * 0.28, 2);
-        const legMat = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 200 });
-        const leg1 = new THREE.Mesh(legGeo, legMat);
-        leg1.position.set(x - w * 0.22, -(h * 0.14), z);
-        city.add(leg1);
-
-        // CHÂN TỤ PHẢI
-        const leg2 = new THREE.Mesh(legGeo, legMat);
-        leg2.position.set(x + w * 0.22, -(h * 0.14), z);
-        city.add(leg2);
-    }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SYS·PROBE</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --g1:#00ff88;
+  --g2:#00cc66;
+  --g3:#00ff44;
+  --g4:#39ff14;
+  --dim:#00ff8844;
+  --dimmer:#00ff8822;
+  --glass:rgba(0,255,136,0.04);
+  --glass-border:rgba(0,255,136,0.15);
+  --glass-border-strong:rgba(0,255,136,0.35);
+  --bg-dark:rgba(0,8,4,0.92);
+  --text:#e0fff0;
+  --text-dim:#6aff9e88;
+  --accent:#00ffaa;
+  --red:#ff3366;
+  --amber:#ffcc00;
+  --cyan:#00eeff;
+  --purple:#aa44ff;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Orbitron',monospace;
 }
 
-        // Tạo hồ nước
-        const lake = new THREE.Mesh(
-            new THREE.CircleGeometry(150, 24),
-            new THREE.MeshPhongMaterial({ color: 0x224466, shininess: 100 })
-        );
-        lake.rotation.x = -Math.PI / 2;
-        lake.position.y = 0.2;
-        scene.add(lake);
-
-        // Rải nhà theo quy hoạch
-        for (let i = 0; i < 500; i++) {
-            const x = (Math.random() - 0.5) * 1400;
-            const z = (Math.random() - 0.5) * 1400;
-            const dist = Math.sqrt(x*x + z*z);
-
-            if (dist < 160) continue; // Chừa chỗ cho hồ
-
-            if (x > 250 || z > 250) {
-                addBuilding(x, z, 'new');
-            } else {
-                addBuilding(x, z, 'old');
-            }
-        }
-        scene.add(city);
-
-        // ============================================================
-        // --- RỪNG CÂY XANH & VÁCH NÚI NGỌC RUBY ---
-        // ============================================================
-        const nature = new THREE.Group();
-
-        // --- HÀM VẼ CÂY ---
-        function addTree(x, z) {
-            const trunkH = 6 + Math.random() * 8;
-            const trunkR = 0.8 + Math.random() * 0.5;
-            const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5c3a1e });
-            const trunk = new THREE.Mesh(
-                new THREE.CylinderGeometry(trunkR * 0.6, trunkR, trunkH, 6),
-                trunkMat
-            );
-            trunk.position.set(x, trunkH / 2, z);
-            nature.add(trunk);
-
-            // 3 tầng tán lá hình nón
-            const leafColors = [0x1a7a2a, 0x228b22, 0x2d9e3a, 0x145214, 0x3cb371];
-            const leafMat = new THREE.MeshPhongMaterial({
-                color: leafColors[Math.floor(Math.random() * leafColors.length)],
-                shininess: 20
-            });
-            const layers = 3;
-            for (let i = 0; i < layers; i++) {
-                const layerR = (3.5 - i * 0.7) + Math.random() * 1.2;
-                const layerH = (5 + Math.random() * 3) - i * 0.5;
-                const cone = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.1, layerR, layerH, 6),
-                    leafMat
-                );
-                cone.position.set(x, trunkH + i * (layerH * 0.55), z);
-                nature.add(cone);
-            }
-        }
-
-        // --- HÀM VẼ VÁCH NÚI CÓ NGỌC RUBY ---
-        function addRubyCliff(x, z) {
-            const cliffW = 18 + Math.random() * 22;
-            const cliffH = 25 + Math.random() * 40;
-            const cliffD = 12 + Math.random() * 14;
-
-            // Thân đá xám xanh
-            const rockColors = [0x5a5a6a, 0x4a4a5a, 0x636373, 0x4e4e60];
-            const rockMat = new THREE.MeshPhongMaterial({
-                color: rockColors[Math.floor(Math.random() * rockColors.length)],
-                shininess: 15
-            });
-
-            // Tạo khối núi từ nhiều box lệch nhau để trông thô ráp
-            const baseBlock = new THREE.Mesh(
-                new THREE.BoxGeometry(cliffW, cliffH, cliffD),
-                rockMat
-            );
-            baseBlock.position.set(x, cliffH / 2, z);
-            baseBlock.rotation.y = Math.random() * Math.PI;
-            nature.add(baseBlock);
-
-            // Thêm vài khối nhỏ lệch để tạo hình núi gồ ghề
-            for (let b = 0; b < 3; b++) {
-                const bw = cliffW * (0.4 + Math.random() * 0.4);
-                const bh = cliffH * (0.3 + Math.random() * 0.5);
-                const chunk = new THREE.Mesh(
-                    new THREE.BoxGeometry(bw, bh, cliffD * 0.8),
-                    rockMat
-                );
-                chunk.position.set(
-                    x + (Math.random() - 0.5) * cliffW * 0.7,
-                    bh / 2 + cliffH * 0.1,
-                    z + (Math.random() - 0.5) * cliffD * 0.5
-                );
-                chunk.rotation.y = Math.random() * Math.PI;
-                nature.add(chunk);
-            }
-
-            // --- TINH THỂ RUBY LẤP LÁNH ---
-            const rubyMat = new THREE.MeshPhongMaterial({
-                color: 0xcc0033,
-                emissive: 0x880011,
-                emissiveIntensity: 0.6,
-                shininess: 400,
-                specular: 0xff6688,
-                transparent: true,
-                opacity: 0.88
-            });
-
-            const numRubies = 4 + Math.floor(Math.random() * 6);
-            for (let r = 0; r < numRubies; r++) {
-                const rubyH = 1.5 + Math.random() * 3.5;
-                const rubyR = 0.6 + Math.random() * 1.2;
-                // Hình bát diện (2 hình chóp ghép đầu nhau)
-                const topCone = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.05, rubyR, rubyH, 6),
-                    rubyMat
-                );
-                const botCone = new THREE.Mesh(
-                    new THREE.CylinderGeometry(rubyR, 0.05, rubyH * 0.6, 6),
-                    rubyMat
-                );
-                const rubyGroup = new THREE.Group();
-                topCone.position.y = rubyH * 0.3;
-                botCone.position.y = -rubyH * 0.3;
-                rubyGroup.add(topCone);
-                rubyGroup.add(botCone);
-
-                // Đặt ruby lên mặt đá, lệch ngẫu nhiên
-                const rx = x + (Math.random() - 0.5) * cliffW * 0.8;
-                const rz = z + (Math.random() - 0.5) * cliffD * 0.6;
-                const ry = cliffH * (0.25 + Math.random() * 0.6);
-                rubyGroup.position.set(rx, ry, rz);
-                rubyGroup.rotation.set(
-                    (Math.random() - 0.5) * 0.8,
-                    Math.random() * Math.PI * 2,
-                    (Math.random() - 0.5) * 0.5
-                );
-                nature.add(rubyGroup);
-
-                // Ánh sáng đỏ nhỏ từ ruby
-                if (r % 5 === 0) {
-                    const rubyLight = new THREE.PointLight(0xff0033, 0.8, 40);
-                    rubyLight.position.set(rx, ry + 2, rz);
-                    nature.add(rubyLight);
-                }
-            }
-        }
-
-        // --- ZONE DEFINITIONS ---
-        // Khu old: x < 250, z < 250
-        // Khu new: x > 250 || z > 250
-        // Rải cây và núi vào BỀ MẶT TRỐNG trong khoảng [-700, 700] x [-700, 700]
-        // Tránh: hồ (r<160), tránh zone dày đặc building (dùng xác suất phân bố)
-
-        // Hàm kiểm tra có nên đặt thiên nhiên tại điểm này không
-        function isGoodNatureSpot(x, z) {
-            const dist = Math.sqrt(x * x + z * z);
-            // Tránh hồ
-            if (dist < 170) return false;
-            // Phải trong bản đồ
-            if (Math.abs(x) > 680 || Math.abs(z) > 680) return false;
-            return true;
-        }
-
-        // Rải cây: ưu tiên vùng BIÊN của 2 khu tòa nhà (nơi ít tòa nhà hơn)
-        // Khu old (x<250, z<250): rải cây xung quanh tòa nhà
-        // Khu new (x>250||z>250): rải cây và vách núi quanh cao ốc
-
-        const treePositions = new Set();
-
-        function rng2(x, z, seed) {
-            // Deterministic pseudo-random để tránh overlap
-            return ((Math.sin(x * 12.9898 + z * 78.233 + seed) * 43758.5453) % 1 + 1) % 1;
-        }
-
-        // Rải cây theo lưới ngẫu nhiên với jitter
-        const GRID_STEP = 28;
-        for (let gx = -680; gx <= 680; gx += GRID_STEP) {
-            for (let gz = -680; gz <= 680; gz += GRID_STEP) {
-                // Jitter vị trí
-                const jx = gx + (Math.random() - 0.5) * GRID_STEP * 0.85;
-                const jz = gz + (Math.random() - 0.5) * GRID_STEP * 0.85;
-
-                if (!isGoodNatureSpot(jx, jz)) continue;
-
-                // Xác suất đặt cây cao hơn ở vùng ít building (biên giữa 2 zone)
-                // Giảm mật độ cây ở vùng dày đặc cao ốc (|x|>400 && |z|>400)
-                const isDeepNew = (Math.abs(jx) > 400 && Math.abs(jz) > 400);
-                const isOldZone = (jx < 250 && jz < 250);
-                const prob = isDeepNew ? 0.12 : (isOldZone ? 0.22 : 0.30);
-
-                if (Math.random() < prob) {
-                    addTree(jx, jz);
-                }
-            }
-        }
-
-        // Rải cụm cây dày hơn ở vùng biên giữa 2 khu (khoảng x=200-350, z=200-350)
-        for (let i = 0; i < 60; i++) {
-            const jx = 150 + Math.random() * 250 - (Math.random() < 0.5 ? 350 : 0);
-            const jz = 150 + Math.random() * 250 - (Math.random() < 0.5 ? 350 : 0);
-            if (isGoodNatureSpot(jx, jz)) {
-                addTree(jx, jz);
-            }
-        }
-
-        // Rải vách núi có ruby: ưu tiên khu biên ngoài và góc bản đồ
-        const cliffSpots = [];
-        for (let i = 0; i < 30; i++) {
-            let cx, cz;
-            // Phân bố: 60% ở ngoại ô (r=450-650), 40% ở trong (r=200-450)
-            if (Math.random() < 0.6) {
-                const angle = Math.random() * Math.PI * 2;
-                const r = 450 + Math.random() * 200;
-                cx = Math.cos(angle) * r;
-                cz = Math.sin(angle) * r;
-            } else {
-                cx = (Math.random() - 0.5) * 700;
-                cz = (Math.random() - 0.5) * 700;
-            }
-            if (isGoodNatureSpot(cx, cz)) {
-                addRubyCliff(cx, cz);
-                cliffSpots.push({ x: cx, z: cz });
-            }
-        }
-
-        scene.add(nature);
-
-        // Animate ruby glow (pulsate emissive) — lưu ruby meshes
-        // Collect tất cả ruby mesh để animate
-        const rubyMeshes = [];
-        nature.traverse(obj => {
-            if (obj.isMesh && obj.material && obj.material.emissive &&
-                obj.material.color && obj.material.color.r > 0.5 &&
-                obj.material.color.g < 0.1) {
-                rubyMeshes.push(obj);
-            }
-        });
-
-        // ============================================================
-        // --- GIAO THÔNG: Ô TÔ, XE MÁY, NGƯỜI ĐI BỘ ---
-        // ============================================================
-
-        const traffic = []; // mảng lưu tất cả phương tiện
-
-        // --- TẠO Ô TÔ ---
-        function createCar() {
-            const group = new THREE.Group();
-            const carColors = [0xcc2200, 0x0044cc, 0xffffff, 0x222222, 0xffcc00, 0x006633, 0xff6600, 0x880088];
-            const bodyColor = carColors[Math.floor(Math.random() * carColors.length)];
-
-            // Thân xe dưới
-            const bodyLow = new THREE.Mesh(
-                new THREE.BoxGeometry(7, 2.2, 3.5),
-                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 120 })
-            );
-            bodyLow.position.y = 1.5;
-            group.add(bodyLow);
-
-            // Thân xe trên (cabin)
-            const bodyTop = new THREE.Mesh(
-                new THREE.BoxGeometry(4.5, 2, 3.2),
-                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 120 })
-            );
-            bodyTop.position.set(-0.3, 3.3, 0);
-            group.add(bodyTop);
-
-            // Kính chắn gió (xanh nhạt)
-            const glassMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, transparent: true, opacity: 0.7, shininess: 200 });
-            const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.6, 2.8), glassMat);
-            windshield.position.set(1.9, 3.3, 0);
-            group.add(windshield);
-
-            // Bánh xe (4 cái)
-            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.7, 8);
-            const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
-            [[-2.5, 0, 2], [2.5, 0, 2], [-2.5, 0, -2], [2.5, 0, -2]].forEach(([wx, wy, wz]) => {
-                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-                wheel.rotation.x = Math.PI / 2;
-                wheel.position.set(wx, 0.9, wz);
-                group.add(wheel);
-            });
-
-            // Đèn trước (vàng)
-            const headlightMat = new THREE.MeshPhongMaterial({ color: 0xffffaa, emissive: 0xffff44, emissiveIntensity: 0.8 });
-            [-1.1, 1.1].forEach(oz => {
-                const light = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.8), headlightMat);
-                light.position.set(3.5, 1.8, oz);
-                group.add(light);
-            });
-
-            // Đèn hậu (đỏ)
-            const taillightMat = new THREE.MeshPhongMaterial({ color: 0xff2200, emissive: 0xff0000, emissiveIntensity: 0.5 });
-            [-1.1, 1.1].forEach(oz => {
-                const tlight = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.8), taillightMat);
-                tlight.position.set(-3.5, 1.8, oz);
-                group.add(tlight);
-            });
-
-            return group;
-        }
-
-        // --- TẠO XE MÁY ---
-        function createMotorbike() {
-            const group = new THREE.Group();
-            const motoColors = [0xcc0000, 0x0055ff, 0x111111, 0xffaa00, 0x009944];
-            const bodyColor = motoColors[Math.floor(Math.random() * motoColors.length)];
-
-            // Thân xe
-            const body = new THREE.Mesh(
-                new THREE.BoxGeometry(4, 1.2, 1.4),
-                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 100 })
-            );
-            body.position.y = 2;
-            group.add(body);
-
-            // Đầu xe (ốp đèn)
-            const nose = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 1.4, 1.2),
-                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 100 })
-            );
-            nose.position.set(2, 2.2, 0);
-            group.add(nose);
-
-            // Đèn trước
-            const headlight = new THREE.Mesh(
-                new THREE.BoxGeometry(0.2, 0.6, 0.8),
-                new THREE.MeshPhongMaterial({ color: 0xffffaa, emissive: 0xffff44, emissiveIntensity: 0.8 })
-            );
-            headlight.position.set(2.6, 2.2, 0);
-            group.add(headlight);
-
-            // Yên xe
-            const seat = new THREE.Mesh(
-                new THREE.BoxGeometry(2.2, 0.5, 1.3),
-                new THREE.MeshPhongMaterial({ color: 0x222222 })
-            );
-            seat.position.set(-0.3, 2.8, 0);
-            group.add(seat);
-
-            // Người lái (capsule đơn giản)
-            const riderBody = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.45, 0.45, 2.2, 8),
-                new THREE.MeshPhongMaterial({ color: 0x334455 })
-            );
-            riderBody.position.set(-0.2, 4.5, 0);
-            group.add(riderBody);
-
-            // Đầu người lái
-            const riderHead = new THREE.Mesh(
-                new THREE.SphereGeometry(0.55, 6, 6),
-                new THREE.MeshPhongMaterial({ color: 0xff9966 })
-            );
-            riderHead.position.set(-0.1, 5.8, 0);
-            group.add(riderHead);
-
-            // Mũ bảo hiểm
-            const helmet = new THREE.Mesh(
-                new THREE.SphereGeometry(0.65, 7, 5),
-                new THREE.MeshPhongMaterial({ color: bodyColor, shininess: 200 })
-            );
-            helmet.position.set(-0.1, 5.85, 0);
-            group.add(helmet);
-
-            // Bánh xe
-            const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.5, 8);
-            const wheelMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
-            [2, -2].forEach(wx => {
-                const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-                wheel.rotation.x = Math.PI / 2;
-                wheel.position.set(wx, 0.9, 0);
-                group.add(wheel);
-            });
-
-            return group;
-        }
-
-        // --- TẠO NGƯỜI ĐI BỘ ---
-        function createPedestrian() {
-            const group = new THREE.Group();
-            const skinColors = [0xffcc99, 0xcc9966, 0xffaa77];
-            const shirtColors = [0xff4444, 0x4444ff, 0x44aa44, 0xffffff, 0xff9900, 0x9900cc, 0x00cccc];
-            const pantColors  = [0x223355, 0x111111, 0x553322, 0x445533];
-
-            const skin  = skinColors [Math.floor(Math.random() * skinColors.length)];
-            const shirt = shirtColors[Math.floor(Math.random() * shirtColors.length)];
-            const pant  = pantColors [Math.floor(Math.random() * pantColors.length)];
-
-            // Chân
-            [-0.3, 0.3].forEach(ox => {
-                const leg = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.4, 1.4, 0.4),
-                    new THREE.MeshPhongMaterial({ color: pant })
-                );
-                leg.position.set(ox, 0.7, 0);
-                group.add(leg);
-            });
-
-            // Thân
-            const torso = new THREE.Mesh(
-                new THREE.BoxGeometry(0.9, 1.4, 0.5),
-                new THREE.MeshPhongMaterial({ color: shirt })
-            );
-            torso.position.y = 2.1;
-            group.add(torso);
-
-            // Tay
-            [-0.7, 0.7].forEach(ox => {
-                const arm = new THREE.Mesh(
-                    new THREE.BoxGeometry(0.35, 1.1, 0.35),
-                    new THREE.MeshPhongMaterial({ color: shirt })
-                );
-                arm.position.set(ox, 2.1, 0);
-                group.add(arm);
-            });
-
-            // Đầu
-            const head = new THREE.Mesh(
-                new THREE.SphereGeometry(0.45, 6, 6),
-                new THREE.MeshPhongMaterial({ color: skin })
-            );
-            head.position.y = 3.35;
-            group.add(head);
-
-            return group;
-        }
-
-        // --- THU THẬP VỊ TRÍ CHƯỚNG NGẠI VẬT (tòa nhà) ---
-        // Dùng bounding circle đơn giản cho mỗi building dựa trên x,z đã spawn
-        const obstacles = []; // { x, z, r }
-        const LAKE_R = 162; // bán kính hồ + buffer
-
-        // Hàm kiểm tra vị trí có hợp lệ không (tránh hồ, tránh biên)
-        function isValidSpawn(x, z) {
-            const distLake = Math.sqrt(x * x + z * z);
-            if (distLake < LAKE_R + 20) return false;
-            if (Math.abs(x) > 680 || Math.abs(z) > 680) return false;
-            return true;
-        }
-
-        // Hàm tìm vị trí spawn hợp lệ
-        function randomValidPos(minR, maxR) {
-            let x, z, tries = 0;
-            do {
-                const angle = Math.random() * Math.PI * 2;
-                const r = minR + Math.random() * (maxR - minR);
-                x = Math.cos(angle) * r + (Math.random() - 0.5) * 40;
-                z = Math.sin(angle) * r + (Math.random() - 0.5) * 40;
-                tries++;
-            } while (!isValidSpawn(x, z) && tries < 30);
-            return { x, z };
-        }
-
-        // --- KHỞI TẠO PHƯƠNG TIỆN ---
-        // Ô tô: 17 chiếc (giảm một nửa từ 35)
-        for (let i = 0; i < 17; i++) {
-            const car = createCar();
-            const pos = randomValidPos(170, 650);
-            const angle = Math.atan2(pos.z, pos.x);
-            const dir = (Math.random() > 0.5 ? 1 : -1);
-            const speed = (0.12 + Math.random() * 0.12) * dir; // đơn vị world/frame
-            car.position.set(pos.x, 0, pos.z);
-            car.rotation.y = -angle + (dir < 0 ? Math.PI : 0);
-            scene.add(car);
-            traffic.push({
-                mesh: car,
-                type: 'car',
-                vx: Math.cos(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
-                vz: -Math.sin(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
-                baseSpeed: Math.abs(speed),
-                wobble: Math.random() * Math.PI * 2,
-                stepPhase: 0,
-                turnTimer: 0,
-                turnInterval: 180 + Math.random() * 300
-            });
-        }
-
-        // Xe máy: 30 chiếc (giảm một nửa từ 60)
-        for (let i = 0; i < 30; i++) {
-            const moto = createMotorbike();
-            const pos = randomValidPos(170, 650);
-            const angle = Math.atan2(pos.z, pos.x);
-            const dir = (Math.random() > 0.5 ? 1 : -1);
-            const speed = (0.18 + Math.random() * 0.15) * dir;
-            moto.position.set(pos.x, 0, pos.z);
-            moto.rotation.y = -angle + (dir < 0 ? Math.PI : 0);
-            scene.add(moto);
-            traffic.push({
-                mesh: moto,
-                type: 'moto',
-                vx: Math.cos(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
-                vz: -Math.sin(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
-                baseSpeed: Math.abs(speed),
-                wobble: Math.random() * Math.PI * 2,
-                stepPhase: 0,
-                turnTimer: 0,
-                turnInterval: 120 + Math.random() * 200
-            });
-        }
-
-        // Người đi bộ: 20 người (giảm một nửa từ 40)
-        for (let i = 0; i < 20; i++) {
-            const ped = createPedestrian();
-            const pos = randomValidPos(170, 650);
-            const angle = Math.atan2(pos.z, pos.x);
-            const dir = (Math.random() > 0.5 ? 1 : -1);
-            const speed = (0.04 + Math.random() * 0.03) * dir;
-            ped.position.set(pos.x, 0, pos.z);
-            ped.rotation.y = -angle + (dir < 0 ? Math.PI : 0);
-            scene.add(ped);
-            traffic.push({
-                mesh: ped,
-                type: 'ped',
-                vx: Math.cos(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
-                vz: -Math.sin(-angle + (dir < 0 ? Math.PI : 0)) * Math.abs(speed),
-                baseSpeed: Math.abs(speed),
-                wobble: Math.random() * Math.PI * 2,
-                stepPhase: Math.random() * Math.PI * 2,
-                turnTimer: 0,
-                turnInterval: 60 + Math.random() * 120
-            });
-        }
-
-        // --- UPDATE GIAO THÔNG MỖI FRAME với STEERING ---
-        function updateTraffic() {
-            traffic.forEach(v => {
-                const pos = v.mesh.position;
-                v.wobble += 0.05;
-                v.turnTimer++;
-
-                // --- STEERING: tránh hồ ---
-                const distLake = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
-                if (distLake < LAKE_R + 25) {
-                    // Đẩy ra ngoài: xoay velocity ngược hướng tâm hồ
-                    const nx = pos.x / distLake;
-                    const nz = pos.z / distLake;
-                    const dot = v.vx * nx + v.vz * nz;
-                    // Trừ phần tiếp xúc vào hồ, thêm phần tiếp tuyến
-                    v.vx += -dot * nx * 0.4 + nz * v.baseSpeed * 0.3;
-                    v.vz += -dot * nz * 0.4 - nx * v.baseSpeed * 0.3;
-                }
-
-                // --- STEERING: tránh biên bản đồ ---
-                const BORDER = 660;
-                if (pos.x > BORDER)  v.vx -= 0.08;
-                if (pos.x < -BORDER) v.vx += 0.08;
-                if (pos.z > BORDER)  v.vz -= 0.08;
-                if (pos.z < -BORDER) v.vz += 0.08;
-
-                // --- STEERING: tránh tòa nhà (dùng obstacle list) ---
-                // Scan nhanh các obstacle gần nhất (không dùng vòng lặp toàn bộ 800 nhà)
-                // Thay vào đó dùng grid check đơn giản: nếu vị trí mới bị block thì quẹo
-                const CLEARANCE = v.type === 'car' ? 18 : (v.type === 'moto' ? 12 : 8);
-                // Kiểm tra ô lưới quanh vị trí tiếp theo
-                const nextX = pos.x + v.vx;
-                const nextZ = pos.z + v.vz;
-                // Đơn giản: nếu vị trí tiếp theo nằm trong cluster tòa nhà (x>250 || z>250 = new building zone)
-                // dùng noise-based deflection — xoay nhẹ velocity theo wobble
-                const inDenseZone = (Math.abs(nextX) > 240 || Math.abs(nextZ) > 240);
-                if (inDenseZone) {
-                    // Thêm lực lắc để mô phỏng tránh nhà
-                    const wobbleTurn = Math.sin(v.wobble * 1.7) * 0.06;
-                    const cosW = Math.cos(wobbleTurn), sinW = Math.sin(wobbleTurn);
-                    const newVx = v.vx * cosW - v.vz * sinW;
-                    const newVz = v.vx * sinW + v.vz * cosW;
-                    v.vx = newVx; v.vz = newVz;
-                }
-
-                // --- Thỉnh thoảng đổi hướng ngẫu nhiên (như chuyển làn) ---
-                if (v.turnTimer > v.turnInterval) {
-                    v.turnTimer = 0;
-                    v.turnInterval = (v.type === 'car' ? 180 : v.type === 'moto' ? 120 : 60) + Math.random() * 200;
-                    const turnAmt = (Math.random() - 0.5) * (v.type === 'ped' ? 1.2 : 0.5);
-                    const cosT = Math.cos(turnAmt), sinT = Math.sin(turnAmt);
-                    const newVx = v.vx * cosT - v.vz * sinT;
-                    const newVz = v.vx * sinT + v.vz * cosT;
-                    v.vx = newVx; v.vz = newVz;
-                }
-
-                // --- Chuẩn hóa tốc độ (giữ baseSpeed) ---
-                const curSpeed = Math.sqrt(v.vx * v.vx + v.vz * v.vz);
-                if (curSpeed > 0.001) {
-                    v.vx = (v.vx / curSpeed) * v.baseSpeed;
-                    v.vz = (v.vz / curSpeed) * v.baseSpeed;
-                }
-
-                // --- Di chuyển ---
-                pos.x += v.vx;
-                pos.z += v.vz;
-
-                // --- Xoay mặt theo hướng đi ---
-                if (curSpeed > 0.001) {
-                    // Car/moto model dài theo trục X (đèn trước ở +X) → cần offset thêm PI/2
-                    const modelOffset = (v.type === 'ped') ? 0 : Math.PI / 2;
-                    const targetAngle = Math.atan2(v.vx, v.vz) - modelOffset;
-                    let curAngle = v.mesh.rotation.y;
-                    let diff = targetAngle - curAngle;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    const lerpRate = v.type === 'car' ? 0.06 : v.type === 'moto' ? 0.09 : 0.12;
-                    v.mesh.rotation.y += diff * lerpRate;
-                }
-
-                // --- Người đi bộ: nhún chân ---
-                if (v.type === 'ped') {
-                    v.stepPhase += 0.15;
-                    pos.y = Math.abs(Math.sin(v.stepPhase)) * 0.25;
-                } else {
-                    pos.y = 0;
-                }
-            });
-        }
-
-        // ============================================================
-        // --- THÊM CHỮ EMIN VÀO CÁC TÒA NHÀ CAO ỐC (type 'new') ---
-        // ============================================================
-        const eminNames = [
-            'Emin Hà Nội', 'Emin HCM', 'Emin Bắc Ninh',
-            'Emin Hải Phòng', 'Emin Đà Nẵng', 'Emin Đồng Nai'
-        ];
-
-        function addEminLabel(x, z, h, w, d) {
-            const name = eminNames[Math.floor(Math.random() * eminNames.length)];
-            const cv = document.createElement('canvas');
-            cv.width = 512; cv.height = 256;
-            const ctx = cv.getContext('2d');
-
-            // Nền trong suốt
-            ctx.clearRect(0, 0, 512, 256);
-
-            // Bo góc nền tối bán trong suốt
-            ctx.fillStyle = 'rgba(0,0,0,0.72)';
-            ctx.roundRect(8, 8, 496, 240, 18);
-            ctx.fill();
-
-            // Viền neon xanh
-            ctx.strokeStyle = '#00ffcc';
-            ctx.lineWidth = 5;
-            ctx.roundRect(8, 8, 496, 240, 18);
-            ctx.stroke();
-
-            // Chữ EMIN to, gradient xanh neon
-            const grad = ctx.createLinearGradient(0, 40, 0, 150);
-            grad.addColorStop(0, '#00ffee');
-            grad.addColorStop(1, '#0099ff');
-            ctx.fillStyle = grad;
-            ctx.font = 'bold 90px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('EMIN', 256, 130);
-
-            // Dòng tên chi nhánh nhỏ hơn
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 38px Arial';
-            const branch = name.replace('Emin ', '');
-            ctx.fillText(branch, 256, 195);
-
-            const tex = new THREE.CanvasTexture(cv);
-            const labelW = w * 1.1;
-            const labelH = h * 0.22;
-
-            // Gán lên mặt trước (z+)
-            const label = new THREE.Mesh(
-                new THREE.PlaneGeometry(labelW, labelH),
-                new THREE.MeshPhongMaterial({ map: tex, transparent: true, depthWrite: false })
-            );
-            label.position.set(x, h * 0.6, z + d / 2 + 0.5);
-            city.add(label);
-
-            // Mặt sau (z-)
-            const labelBack = label.clone();
-            labelBack.position.set(x, h * 0.6, z - d / 2 - 0.5);
-            labelBack.rotation.y = Math.PI;
-            city.add(labelBack);
-        }
-
-        // Gắn Emin label vào 1/3 tòa nhà mới (cao ốc)
-        (function attachEminLabels() {
-            // Re-scan và thêm label sau khi city đã build
-            // Vì city group chứa nhiều mesh, ta build một pass riêng
-            // Spawn thêm label objects tại vị trí cao ốc đã tạo
-            const usedPositions = [];
-            for (let i = 0; i < 300; i++) {
-                const x = (Math.random() - 0.5) * 1400;
-                const z = (Math.random() - 0.5) * 1400;
-                const dist = Math.sqrt(x * x + z * z);
-                if (dist < 160) continue;
-                if (x > 250 || z > 250) {
-                    if (Math.random() < 0.35) {
-                        const h = 80 + Math.random() * 120;
-                        const w = 20 + Math.random() * 10;
-                        const d = 20 + Math.random() * 10;
-                        addEminLabel(x, z, h, w, d);
-                    }
-                }
-            }
-        })();
-
-        // ============================================================
-        // --- CAMERA DRONE FLIGHT SYSTEM ---
-        // ============================================================
-
-        // Khu vực OLD (x < 250 và z < 250)
-        const OLD_ZONE = { minX: -700, maxX: 249, minZ: -700, maxZ: 249 };
-
-        // Waypoint system cho chế độ lướt thấp khu OLD
-        let droneWaypoints = [];
-        let droneWpIdx = 0;
-        let droneWpProgress = 0;
-
-        function generateOldZoneWaypoints(count) {
-            const pts = [];
-            for (let i = 0; i < count; i++) {
-                let x, z, tries = 0;
-                do {
-                    x = OLD_ZONE.minX + Math.random() * (OLD_ZONE.maxX - OLD_ZONE.minX);
-                    z = OLD_ZONE.minZ + Math.random() * (OLD_ZONE.maxZ - OLD_ZONE.minZ);
-                    tries++;
-                } while (Math.sqrt(x*x+z*z) < 170 && tries < 30);
-                // Độ cao lướt thấp ngẫu nhiên: 10-30
-                const y = 10 + Math.random() * 20;
-                pts.push(new THREE.Vector3(x, y, z));
-            }
-            return pts;
-        }
-
-        // Trạng thái camera
-        // PHASES: HIGH_ORBIT → DESCEND → LOW_GLIDE (5 vòng) → ASCEND → HIGH_OVERVIEW → DESCEND → ...
-        let camPhase = 'HIGH_ORBIT';
-        let phaseTimer = 0;
-        let orbitAngle = 0;
-        let orbitLaps = 0;          // đếm số lần lap HIGH_ORBIT
-        let lowGlideLaps = 0;       // đếm vòng lướt thấp
-        let lowGlideTimer = 0;
-        let lowGlideSegCount = 0;   // số segment đã đi (mỗi ~3-5 segment = 1 "vòng")
-
-        // Waypoints cho khu old
-        droneWaypoints = generateOldZoneWaypoints(40);
-        droneWpIdx = 0;
-        droneWpProgress = 0;
-
-        // Vị trí camera hiện tại (để lerp mượt)
-        const camPos = new THREE.Vector3(0, 700, 0);
-        const camTarget = new THREE.Vector3(0, 0, 0);
-
-        // HIGH_OVERVIEW: danh sách các vị trí cao ốc để zoom qua
-        const overviewTargets = [
-            new THREE.Vector3(400, 0, 400),
-            new THREE.Vector3(-400, 0, 400),
-            new THREE.Vector3(400, 0, -300),
-            new THREE.Vector3(-350, 0, -350),
-            new THREE.Vector3(500, 0, -200),
-        ];
-        let overviewIdx = 0;
-        let overviewTimer = 0;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            phaseTimer++;
-
-            // ---- HIGH_ORBIT: bay vòng cao nhìn xuống toàn cảnh ----
-            if (camPhase === 'HIGH_ORBIT') {
-                orbitAngle += 0.004;
-                const r = 850;
-                const targetPos = new THREE.Vector3(
-                    Math.sin(orbitAngle) * r,
-                    560 + Math.sin(orbitAngle * 0.3) * 80,
-                    Math.cos(orbitAngle) * r
-                );
-                camPos.lerp(targetPos, 0.04);
-                camTarget.lerp(new THREE.Vector3(0, 50, 0), 0.05);
-                camera.position.copy(camPos);
-                camera.lookAt(camTarget);
-
-                // Sau ~1 vòng → bắt đầu xuống
-                if (orbitAngle > Math.PI * 2) {
-                    orbitAngle = 0;
-                    camPhase = 'DESCEND';
-                    phaseTimer = 0;
-                    droneWaypoints = generateOldZoneWaypoints(40);
-                    droneWpIdx = 0;
-                    droneWpProgress = 0;
-                    lowGlideSegCount = 0;
-                }
-            }
-
-            // ---- DESCEND: lao xuống khu old ----
-            else if (camPhase === 'DESCEND') {
-                const firstWp = droneWaypoints[0];
-                const approachPos = new THREE.Vector3(firstWp.x, 15, firstWp.z);
-                camPos.lerp(approachPos, 0.025);
-                camTarget.lerp(droneWaypoints[1] || firstWp, 0.03);
-                camera.position.copy(camPos);
-                camera.lookAt(camTarget);
-
-                if (camPos.distanceTo(approachPos) < 30) {
-                    camPhase = 'LOW_GLIDE';
-                    phaseTimer = 0;
-                }
-            }
-
-            // ---- LOW_GLIDE: lướt thấp khu old, rẽ ngẫu nhiên ----
-            else if (camPhase === 'LOW_GLIDE') {
-                droneWpProgress += 0.003;
-
-                if (droneWpProgress >= 1) {
-                    droneWpProgress = 0;
-                    droneWpIdx++;
-                    lowGlideSegCount++;
-
-                    // Sau ~5 vòng (mỗi vòng ~8 segment) thì bay lên
-                    if (lowGlideSegCount >= 40) {
-                        lowGlideSegCount = 0;
-                        camPhase = 'ASCEND';
-                        phaseTimer = 0;
-                    } else if (droneWpIdx >= droneWaypoints.length - 1) {
-                        // Hết waypoint thì gen mới
-                        droneWaypoints = generateOldZoneWaypoints(40);
-                        droneWpIdx = 0;
-                    }
-                }
-
-                const wpA = droneWaypoints[droneWpIdx];
-                const wpB = droneWaypoints[Math.min(droneWpIdx + 1, droneWaypoints.length - 1)];
-                const wpC = droneWaypoints[Math.min(droneWpIdx + 2, droneWaypoints.length - 1)];
-
-                // Interpolate mượt (catmull-rom đơn giản với lerp)
-                const t = droneWpProgress;
-                const currentPos = new THREE.Vector3().lerpVectors(wpA, wpB, t);
-                // Nhấp nhô thêm để giống bay lướt
-                currentPos.y += Math.sin(t * Math.PI * 2 + phaseTimer * 0.05) * 3;
-
-                camPos.lerp(currentPos, 0.03);
-                const lookAheadPos = new THREE.Vector3().lerpVectors(wpB, wpC, t);
-                lookAheadPos.y = currentPos.y - 2; // nhìn hơi cúi
-                camTarget.lerp(lookAheadPos, 0.03);
-
-                camera.position.copy(camPos);
-                camera.lookAt(camTarget);
-            }
-
-            // ---- ASCEND: bay lên cao lại ----
-            else if (camPhase === 'ASCEND') {
-                const highPos = new THREE.Vector3(
-                    camPos.x * 0.3 + Math.sin(phaseTimer * 0.01) * 600,
-                    700,
-                    camPos.z * 0.3 + Math.cos(phaseTimer * 0.01) * 600
-                );
-                camPos.lerp(highPos, 0.02);
-                camTarget.lerp(new THREE.Vector3(0, 0, 0), 0.02);
-                camera.position.copy(camPos);
-                camera.lookAt(camTarget);
-
-                if (camPos.y > 500) {
-                    camPhase = 'HIGH_OVERVIEW';
-                    phaseTimer = 0;
-                    overviewIdx = 0;
-                    overviewTimer = 0;
-                }
-            }
-
-            // ---- HIGH_OVERVIEW: lượn cao qua các tòa cao ốc ----
-            else if (camPhase === 'HIGH_OVERVIEW') {
-                overviewTimer++;
-
-                const target = overviewTargets[overviewIdx % overviewTargets.length];
-                const viewPos = new THREE.Vector3(
-                    target.x + Math.sin(overviewTimer * 0.006) * 300,
-                    350 + Math.sin(overviewTimer * 0.008) * 100,
-                    target.z + Math.cos(overviewTimer * 0.006) * 300
-                );
-                camPos.lerp(viewPos, 0.008);
-                camTarget.lerp(new THREE.Vector3(target.x, 80, target.z), 0.02);
-                camera.position.copy(camPos);
-                camera.lookAt(camTarget);
-
-                // Mỗi 4 giây chuyển target cao ốc tiếp theo, sau 5 target thì về orbit
-                if (overviewTimer % 321 === 0) {
-                    overviewIdx++;
-                    if (overviewIdx >= overviewTargets.length) {
-                        camPhase = 'HIGH_ORBIT';
-                        phaseTimer = 0;
-                        orbitAngle = 0;
-                    }
-                }
-            }
-
-            // Ruby pulsate — use phaseTimer to avoid Date.now() overhead
-            const rubyPulse = 0.4 + Math.sin(phaseTimer * 0.03) * 0.35;
-            for (let rm of rubyMeshes) {
-                rm.material.emissiveIntensity = rubyPulse;
-            }
-
-            updateTraffic();
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        animate();
-    </script>
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:#000;
+  font-family:var(--font-mono);
+  color:var(--text);
+}
+
+/* ── Animated BG ── */
+#bg-canvas{position:fixed;inset:0;z-index:0;opacity:0.18;}
+.bg-mesh{
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%,rgba(0,255,100,0.12) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 80%,rgba(0,180,80,0.08) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%,rgba(0,255,136,0.04) 0%,transparent 70%);
+  animation:meshMove 12s ease-in-out infinite alternate;
+}
+@keyframes meshMove{
+  0%{background-position:0% 0%;}
+  100%{background-position:5% 10%;}
+}
+
+/* ── Layout ── */
+#app{
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-rows:64px 1fr 40px;
+  height:100vh;width:100vw;
+  padding:14px;gap:12px;
+}
+
+/* ── Glass mixin ── */
+.glass{
+  background:var(--glass);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-border);
+  border-radius:16px;
+  position:relative;
+  overflow:hidden;
+}
+.glass::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(135deg,rgba(0,255,136,0.07) 0%,transparent 60%);
+  pointer-events:none;
+}
+.glass-top-line{
+  position:absolute;top:0;left:20px;right:20px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--g1),transparent);
+  opacity:0.6;
+}
+
+/* ── Header ── */
+header{
+  display:flex;align-items:center;gap:20px;padding:0 22px;
+}
+.brand{
+  font-family:var(--font-display);
+  font-size:20px;font-weight:900;
+  letter-spacing:6px;
+  color:var(--g1);
+  text-shadow:0 0 30px rgba(0,255,136,0.8),0 0 60px rgba(0,255,136,0.3);
+  position:relative;
+}
+.brand::after{
+  content:'';position:absolute;bottom:-4px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,var(--g1),transparent);
+}
+.brand-sub{font-size:9px;color:var(--text-dim);letter-spacing:3px;margin-top:6px;}
+.status-pills{display:flex;gap:8px;margin-left:auto;}
+.pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,255,136,0.06);
+  border:1px solid var(--glass-border);
+  border-radius:20px;padding:5px 12px;
+  font-size:10px;color:var(--text-dim);letter-spacing:1px;
+}
+.pill-dot{width:6px;height:6px;border-radius:50%;animation:pillBlink 2s ease-in-out infinite;}
+.pill-dot.ok{background:var(--g1);box-shadow:0 0 8px var(--g1);}
+.pill-dot.warn{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+.pill-dot.err{background:var(--red);box-shadow:0 0 8px var(--red);}
+@keyframes pillBlink{0%,100%{opacity:1}50%{opacity:.4}}
+.header-clock{
+  font-family:var(--font-display);font-size:22px;font-weight:700;
+  color:var(--g1);letter-spacing:3px;
+  text-shadow:0 0 20px rgba(0,255,136,0.6);
+}
+.header-date{font-size:9px;color:var(--text-dim);letter-spacing:2px;text-align:right;margin-top:2px;}
+
+/* ── Main Grid ── */
+main{
+  display:grid;
+  grid-template-columns:1.6fr 1.2fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:12px;
+}
+
+/* ── Card label ── */
+.card-label{
+  font-size:9px;letter-spacing:3px;
+  color:var(--text-dim);
+  text-transform:uppercase;
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-label::before{
+  content:'';width:16px;height:1px;
+  background:var(--g1);opacity:0.5;
+}
+
+/* ── IP CARD ── */
+#card-ip{grid-column:1/2;grid-row:1/2;}
+.ip-big{
+  font-family:var(--font-display);
+  font-size:26px;font-weight:700;
+  color:var(--g1);
+  letter-spacing:2px;
+  text-shadow:0 0 30px rgba(0,255,136,0.5);
+  margin-bottom:4px;
+  display:flex;align-items:center;gap:12px;
+}
+.ip-flag{font-size:24px;}
+.ip-sub{font-size:10px;color:var(--text-dim);margin-bottom:14px;}
+.ip-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.ip-chip{
+  background:rgba(0,255,136,0.05);
+  border:1px solid var(--glass-border);
+  border-radius:10px;padding:8px 10px;
+}
+.ip-chip-lbl{font-size:8px;color:var(--text-dim);letter-spacing:2px;margin-bottom:3px;}
+.ip-chip-val{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* ── NET CARD ── */
+#card-net{grid-column:2/3;grid-row:1/2;}
+.speed-rings{display:flex;justify-content:space-around;align-items:center;margin:4px 0 12px;}
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.ring-label{font-size:8px;color:var(--text-dim);letter-spacing:2px;}
+.ring-val{font-family:var(--font-display);font-size:14px;font-weight:700;text-align:center;}
+.ring-val.dl{color:var(--g1);}
+.ring-val.ul{color:var(--cyan);}
+svg.ring-svg{transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:rgba(255,255,255,0.05);stroke-width:4;}
+.ring-fill{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset 1s ease;}
+.ring-fill.dl{stroke:var(--g1);filter:drop-shadow(0 0 4px var(--g1));}
+.ring-fill.ul{stroke:var(--cyan);filter:drop-shadow(0 0 4px var(--cyan));}
+.net-chips{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.net-chip{
+  background:rgba(0,255,136,0.04);
+  border:1px solid var(--glass-border);
+  border-radius:8px;padding:7px 10px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.nc-label{font-size:9px;color:var(--text-dim);}
+.nc-val{font-size:11px;font-weight:600;}
+
+/* ── TIME CARD ── */
+#card-time{grid-column:3/4;grid-row:1/3;}
+.time-wrap{display:flex;flex-direction:column;align-items:center;height:100%;}
+.analog-wrap{position:relative;margin:8px auto 10px;}
+.big-clock{
+  font-family:var(--font-display);font-size:28px;font-weight:900;
+  color:var(--g1);letter-spacing:2px;text-align:center;
+  text-shadow:0 0 40px rgba(0,255,136,0.7);
+  margin-bottom:4px;
+}
+.big-date{font-size:9px;color:var(--text-dim);text-align:center;letter-spacing:2px;margin-bottom:8px;}
+.tz-pill{
+  background:rgba(0,255,136,0.06);border:1px solid var(--glass-border);
+  border-radius:20px;padding:4px 14px;font-size:9px;color:var(--g2);
+  margin-bottom:14px;
+}
+.time-rows{width:100%;display:flex;flex-direction:column;gap:6px;flex:1;}
+.time-row{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(0,255,136,0.04);border:1px solid var(--glass-border);
+  border-radius:8px;padding:7px 12px;
+}
+.tr-label{font-size:8px;color:var(--text-dim);letter-spacing:1px;}
+.tr-val{font-size:10px;color:var(--text);}
+
+/* ── POWER CARD ── */
+#card-power{grid-column:1/2;grid-row:2/3;}
+.power-est-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.25);
+  border-radius:20px;padding:3px 10px;font-size:8px;color:var(--amber);
+  letter-spacing:1px;margin-bottom:10px;
+}
+.power-main-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.power-chip{
+  background:rgba(0,255,136,0.05);border:1px solid var(--glass-border);
+  border-radius:10px;padding:10px 8px;text-align:center;position:relative;overflow:hidden;
+  transition:border-color .3s;
+}
+.power-chip:hover{border-color:var(--glass-border-strong);}
+.power-chip::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;}
+.power-chip.v::before{background:var(--amber);}
+.power-chip.a::before{background:var(--cyan);}
+.power-chip.w::before{background:var(--g1);}
+.pc-label{font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-bottom:5px;}
+.pc-val{font-family:var(--font-display);font-size:20px;font-weight:700;line-height:1;}
+.pc-unit{font-size:9px;color:var(--text-dim);margin-top:3px;}
+.pc-val.v{color:var(--amber);text-shadow:0 0 12px rgba(255,204,0,.5);}
+.pc-val.a{color:var(--cyan);text-shadow:0 0 12px rgba(0,238,255,.5);}
+.pc-val.w{color:var(--g1);text-shadow:0 0 12px rgba(0,255,136,.5);}
+.power-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.pd-chip{
+  background:rgba(0,255,136,0.03);border:1px solid var(--glass-border);
+  border-radius:8px;padding:6px 10px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.pd-label{font-size:8px;color:var(--text-dim);letter-spacing:1px;}
+.pd-val{font-size:10px;font-weight:600;}
+.power-bar-wrap{margin:8px 0 10px;}
+.power-bar-label{display:flex;justify-content:space-between;font-size:8px;color:var(--text-dim);margin-bottom:4px;}
+.power-bar-track{height:5px;background:rgba(0,255,136,0.08);border-radius:3px;overflow:hidden;}
+.power-bar-fill{height:100%;border-radius:3px;transition:width 1.5s ease;background:linear-gradient(90deg,var(--g2),var(--g1));}
+
+/* ── BATTERY CARD ── */
+#card-batt{grid-column:2/3;grid-row:2/3;}
+.batt-layout{display:flex;gap:14px;align-items:center;flex:1;}
+.batt-visual-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+.batt-pct-label{font-family:var(--font-display);font-size:20px;font-weight:700;}
+.batt-svg-wrap{position:relative;width:44px;}
+.batt-info-grid{flex:1;display:flex;flex-direction:column;gap:6px;}
+.batt-row{
+  display:flex;justify-content:space-between;
+  background:rgba(0,255,136,0.04);border:1px solid var(--glass-border);
+  border-radius:8px;padding:6px 10px;
+}
+.br-label{font-size:8px;color:var(--text-dim);}
+.br-val{font-size:10px;font-weight:600;}
+
+/* ── Footer ── */
+footer{
+  display:flex;align-items:center;gap:14px;padding:0 20px;
+}
+.f-item{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+.f-dot{width:5px;height:5px;border-radius:50%;}
+.f-dot.ok{background:var(--g1);box-shadow:0 0 6px var(--g1);}
+.f-dot.warn{background:var(--amber);}
+.f-dot.err{background:var(--red);}
+.f-sep{width:1px;height:16px;background:var(--glass-border);}
+.f-right{margin-left:auto;font-size:8px;color:rgba(0,255,136,0.25);letter-spacing:1px;}
+
+/* ── Loader ── */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:#000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity 0.6s ease;
+}
+.loader-brand{font-family:var(--font-display);font-size:28px;font-weight:900;letter-spacing:8px;color:var(--g1);text-shadow:0 0 40px rgba(0,255,136,0.8);}
+.loader-line{width:280px;height:1px;background:var(--glass-border);border-radius:1px;overflow:hidden;position:relative;}
+.loader-line::after{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,var(--g1),transparent);
+  animation:scan 1.4s ease-in-out infinite;
+}
+@keyframes scan{to{left:200%;}}
+.loader-status{font-size:10px;color:var(--text-dim);letter-spacing:3px;}
+
+/* ── Animations ── */
+.glass{animation:cardIn .5s ease both;}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+#card-ip{animation-delay:.1s}
+#card-net{animation-delay:.2s}
+#card-time{animation-delay:.25s}
+#card-power{animation-delay:.3s}
+#card-batt{animation-delay:.35s}
+header{animation:cardIn .4s ease both;}
+footer{animation:cardIn .5s .4s ease both;}
+
+/* glow pulse on values */
+@keyframes glowPulse{0%,100%{text-shadow:0 0 20px rgba(0,255,136,0.5)}50%{text-shadow:0 0 40px rgba(0,255,136,0.9),0 0 80px rgba(0,255,136,0.3)}}
+.glow-pulse{animation:glowPulse 3s ease-in-out infinite;}
+</style>
+</head>
+<body>
+
+<!-- Matrix rain canvas -->
+<canvas id="bg-canvas"></canvas>
+<div class="bg-mesh"></div>
+
+<div id="loader">
+  <div class="loader-brand">SYS·PROBE</div>
+  <div class="loader-line"></div>
+  <div class="loader-status" id="loader-status">INITIALIZING SENSORS...</div>
+</div>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="glass">
+    <div class="glass-top-line"></div>
+    <div>
+      <div class="brand">SYS·PROBE</div>
+      <div class="brand-sub">NETWORK &amp; SYSTEM MONITOR</div>
+    </div>
+    <div class="status-pills">
+      <div class="pill"><div class="pill-dot ok"></div>LIVE</div>
+      <div class="pill"><div class="pill-dot ok" id="net-status-dot"></div><span id="net-status-txt">NETWORK</span></div>
+      <div class="pill"><div class="pill-dot warn"></div>POWER: EST</div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div class="header-clock glow-pulse" id="h-clock">--:--:--</div>
+      <div class="header-date" id="h-date">--- -- ----</div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- IP -->
+    <div class="glass" id="card-ip" style="padding:18px 20px;">
+      <div class="glass-top-line"></div>
+      <div class="card-label">PUBLIC IP ADDRESS</div>
+      <div class="ip-big">
+        <span id="ip-val" class="glow-pulse">RESOLVING...</span>
+        <span class="ip-flag" id="ip-flag"></span>
+      </div>
+      <div class="ip-sub" id="ip-sub">Fetching geolocation data...</div>
+      <div class="ip-grid">
+        <div class="ip-chip"><div class="ip-chip-lbl">ISP / ORG</div><div class="ip-chip-val" id="ip-isp">—</div></div>
+        <div class="ip-chip"><div class="ip-chip-lbl">CITY</div><div class="ip-chip-val" id="ip-city">—</div></div>
+        <div class="ip-chip"><div class="ip-chip-lbl">COUNTRY</div><div class="ip-chip-val" id="ip-country">—</div></div>
+        <div class="ip-chip"><div class="ip-chip-lbl">TIMEZONE</div><div class="ip-chip-val" id="ip-tz">—</div></div>
+        <div class="ip-chip"><div class="ip-chip-lbl">ASN</div><div class="ip-chip-val" id="ip-asn">—</div></div>
+        <div class="ip-chip"><div class="ip-chip-lbl">REGION</div><div class="ip-chip-val" id="ip-region">—</div></div>
+      </div>
+    </div>
+
+    <!-- NET -->
+    <div class="glass" id="card-net" style="padding:18px 20px;">
+      <div class="glass-top-line"></div>
+      <div class="card-label">NETWORK INTERFACE</div>
+      <div class="speed-rings">
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="80" height="80" viewBox="0 0 80 80">
+            <circle class="ring-bg" cx="40" cy="40" r="30"/>
+            <circle class="ring-fill dl" id="ring-dl" cx="40" cy="40" r="30"
+              stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+          </svg>
+          <div class="ring-val dl" id="dl-val">—</div>
+          <div class="ring-label">↓ DOWNLOAD Mbps</div>
+        </div>
+        <div style="width:1px;height:60px;background:var(--glass-border);"></div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="80" height="80" viewBox="0 0 80 80">
+            <circle class="ring-bg" cx="40" cy="40" r="30"/>
+            <circle class="ring-fill ul" id="ring-ul" cx="40" cy="40" r="30"
+              stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+          </svg>
+          <div class="ring-val ul" id="ul-val">—</div>
+          <div class="ring-label">↑ UPLOAD Mbps</div>
+        </div>
+      </div>
+      <div class="net-chips">
+        <div class="net-chip"><span class="nc-label">TYPE</span><span class="nc-val" id="nc-type" style="color:var(--g1);">—</span></div>
+        <div class="net-chip"><span class="nc-label">RTT</span><span class="nc-val" id="nc-rtt" style="color:var(--cyan);">—ms</span></div>
+        <div class="net-chip"><span class="nc-label">PING</span><span class="nc-val" id="nc-ping" style="color:var(--amber);">—ms</span></div>
+        <div class="net-chip"><span class="nc-label">DATA SAVER</span><span class="nc-val" id="nc-save" style="color:var(--text);">—</span></div>
+      </div>
+    </div>
+
+    <!-- TIME -->
+    <div class="glass" id="card-time" style="padding:18px 16px;display:flex;flex-direction:column;">
+      <div class="glass-top-line"></div>
+      <div class="card-label">SYSTEM TIME</div>
+      <div class="time-wrap">
+        <div class="analog-wrap">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <defs>
+              <filter id="glow"><feGaussianBlur stdDeviation="2" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <circle cx="50" cy="50" r="46" fill="rgba(0,255,136,0.04)" stroke="rgba(0,255,136,0.15)" stroke-width="1"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,255,136,0.06)" stroke-width="0.5"/>
+            <g id="clock-ticks"></g>
+            <line id="hand-h" x1="50" y1="50" x2="50" y2="26" stroke="var(--amber)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+            <line id="hand-m" x1="50" y1="50" x2="50" y2="18" stroke="var(--g1)" stroke-width="2" stroke-linecap="round" filter="url(#glow)"/>
+            <line id="hand-s" x1="50" y1="50" x2="50" y2="14" stroke="var(--cyan)" stroke-width="1" stroke-linecap="round" filter="url(#glow)"/>
+            <circle cx="50" cy="50" r="3" fill="var(--g1)" filter="url(#glow)"/>
+            <circle cx="50" cy="50" r="1.5" fill="#000"/>
+          </svg>
+        </div>
+        <div class="big-clock glow-pulse" id="big-clock">--:--:--</div>
+        <div class="big-date" id="big-date">--- --- ----</div>
+        <div class="tz-pill" id="tz-pill">UTC±0</div>
+        <div class="time-rows">
+          <div class="time-row"><span class="tr-label">UNIX TS</span><span class="tr-val" id="unix-ts">—</span></div>
+          <div class="time-row"><span class="tr-label">DAY / YEAR</span><span class="tr-val" id="day-year">—</span></div>
+          <div class="time-row"><span class="tr-label">WEEK</span><span class="tr-val" id="week-num">—</span></div>
+          <div class="time-row"><span class="tr-label">UTC OFFSET</span><span class="tr-val" id="utc-off">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POWER -->
+    <div class="glass" id="card-power" style="padding:18px 20px;display:flex;flex-direction:column;">
+      <div class="glass-top-line"></div>
+      <div class="card-label">POWER METRICS</div>
+      <div class="power-est-badge">⚠ ESTIMATED — based on OS profile &amp; Battery API</div>
+      <div class="power-main-grid">
+        <div class="power-chip v">
+          <div class="pc-label">VOLTAGE</div>
+          <div class="pc-val v" id="pw-volt">—</div>
+          <div class="pc-unit">Volts</div>
+        </div>
+        <div class="power-chip a">
+          <div class="pc-label">CURRENT</div>
+          <div class="pc-val a" id="pw-amp">—</div>
+          <div class="pc-unit">Amperes</div>
+        </div>
+        <div class="power-chip w">
+          <div class="pc-label">WATTAGE</div>
+          <div class="pc-val w" id="pw-watt">—</div>
+          <div class="pc-unit">Watts</div>
+        </div>
+      </div>
+      <div class="power-bar-wrap">
+        <div class="power-bar-label"><span>LOAD ESTIMATE</span><span id="pw-load-pct">—%</span></div>
+        <div class="power-bar-track"><div class="power-bar-fill" id="pw-bar" style="width:0%"></div></div>
+      </div>
+      <div class="power-detail-grid">
+        <div class="pd-chip"><span class="pd-label">OS PROFILE</span><span class="pd-val" id="pw-os" style="color:var(--g1);">—</span></div>
+        <div class="pd-chip"><span class="pd-label">CPU CORES</span><span class="pd-val" id="pw-cores" style="color:var(--cyan);">—</span></div>
+        <div class="pd-chip"><span class="pd-label">DEVICE MEM</span><span class="pd-val" id="pw-mem" style="color:var(--amber);">—</span></div>
+        <div class="pd-chip"><span class="pd-label">BATT VOLTAGE</span><span class="pd-val" id="pw-bvolt" style="color:var(--text);">—</span></div>
+      </div>
+    </div>
+
+    <!-- BATTERY -->
+    <div class="glass" id="card-batt" style="padding:18px 20px;display:flex;flex-direction:column;">
+      <div class="glass-top-line"></div>
+      <div class="card-label">BATTERY &amp; DEVICE</div>
+      <div class="batt-layout">
+        <div class="batt-visual-wrap">
+          <svg width="44" height="80" viewBox="0 0 44 80">
+            <defs>
+              <clipPath id="batt-clip"><rect x="3" y="8" width="38" height="68" rx="5"/></clipPath>
+              <filter id="battGlow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <rect x="14" y="1" width="16" height="8" rx="3" fill="rgba(0,255,136,0.2)" stroke="rgba(0,255,136,0.3)" stroke-width="1"/>
+            <rect x="3" y="8" width="38" height="68" rx="5" fill="rgba(0,255,136,0.05)" stroke="rgba(0,255,136,0.25)" stroke-width="1.5"/>
+            <rect id="batt-fill-rect" x="5" y="10" width="34" height="0" rx="3" fill="var(--g1)" filter="url(#battGlow)" style="transition:all 1s ease;transform-origin:bottom;transform:scaleY(-1) translateY(-74px)"/>
+            <text id="batt-svg-pct" x="22" y="52" text-anchor="middle" fill="rgba(0,255,136,0.9)" font-family="Orbitron,monospace" font-size="10" font-weight="700">—%</text>
+          </svg>
+        </div>
+        <div class="batt-info-grid">
+          <div class="batt-row"><span class="br-label">LEVEL</span><span class="br-val" id="batt-pct" style="color:var(--g1);">—</span></div>
+          <div class="batt-row"><span class="br-label">STATUS</span><span class="br-val" id="batt-status" style="color:var(--amber);">—</span></div>
+          <div class="batt-row"><span class="br-label">ETA</span><span class="br-val" id="batt-eta" style="color:var(--text);">—</span></div>
+          <div class="batt-row"><span class="br-label">PLATFORM</span><span class="br-val" id="sys-platform" style="color:var(--cyan);font-size:9px;">—</span></div>
+          <div class="batt-row"><span class="br-label">SCREEN</span><span class="br-val" id="sys-screen" style="color:var(--text);font-size:9px;">—</span></div>
+          <div class="batt-row"><span class="br-label">LANG</span><span class="br-val" id="sys-lang" style="color:var(--text);">—</span></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="glass" style="border-radius:12px;">
+    <div class="glass-top-line"></div>
+    <div class="f-item"><div class="f-dot ok"></div>IP OK</div>
+    <div class="f-sep"></div>
+    <div class="f-item"><div class="f-dot ok" id="fd-net"></div>NET OK</div>
+    <div class="f-sep"></div>
+    <div class="f-item"><div class="f-dot warn"></div>POWER: ESTIMATED</div>
+    <div class="f-sep"></div>
+    <div class="f-item"><div class="f-dot ok" id="fd-batt"></div><span id="fd-batt-txt">BATTERY OK</span></div>
+    <div class="f-right">SYS·PROBE — BROWSER SANDBOX · DATA IS LOCAL &amp; NOT STORED</div>
+  </footer>
+
+</div>
+
+<script>
+/* ── Matrix Rain ── */
+(function(){
+  const c=document.getElementById('bg-canvas');
+  const ctx=c.getContext('2d');
+  c.width=window.innerWidth; c.height=window.innerHeight;
+  const cols=Math.floor(c.width/18);
+  const drops=Array(cols).fill(0).map(()=>Math.random()*c.height/18|0);
+  const chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノ∑∆∫≈≠∞';
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,0.05)';
+    ctx.fillRect(0,0,c.width,c.height);
+    for(let i=0;i<cols;i++){
+      const ch=chars[Math.random()*chars.length|0];
+      const x=i*18;const y=drops[i]*18;
+      const brightness=Math.random();
+      if(brightness>0.98){ctx.fillStyle='#ffffff';ctx.font='bold 13px monospace';}
+      else if(brightness>0.9){ctx.fillStyle='#00ff88';ctx.font='13px monospace';}
+      else{ctx.fillStyle='rgba(0,180,80,0.5)';ctx.font='12px monospace';}
+      ctx.fillText(ch,x,y);
+      if(y>c.height&&Math.random()>0.975) drops[i]=0;
+      drops[i]++;
+    }
+  }
+  setInterval(draw,50);
+  window.addEventListener('resize',()=>{c.width=window.innerWidth;c.height=window.innerHeight;});
+})();
+
+/* ── Clock ticks ── */
+(function(){
+  const g=document.getElementById('clock-ticks');
+  for(let i=0;i<60;i++){
+    const ang=(i*6-90)*Math.PI/180;
+    const r1=i%5===0?34:38,r2=42;
+    const x1=50+r1*Math.cos(ang),y1=50+r1*Math.sin(ang);
+    const x2=50+r2*Math.cos(ang),y2=50+r2*Math.sin(ang);
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+    l.setAttribute('stroke',i%5===0?'rgba(0,255,136,0.4)':'rgba(0,255,136,0.12)');
+    l.setAttribute('stroke-width',i%5===0?'1.5':'0.8');
+    g.appendChild(l);
+  }
+})();
+
+/* ── Clock ── */
+const pad=n=>String(n).padStart(2,'0');
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function getWeek(d){const a=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));a.setUTCDate(a.getUTCDate()+4-(a.getUTCDay()||7));const y=new Date(Date.UTC(a.getUTCFullYear(),0,1));return Math.ceil((((a-y)/86400000)+1)/7);}
+function getDOY(d){return Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);}
+function rotateHand(id,deg,cx,cy,len){
+  const el=document.getElementById(id);
+  const r=(deg-90)*Math.PI/180;
+  el.setAttribute('x2',(cx+len*Math.cos(r)).toFixed(2));
+  el.setAttribute('y2',(cy+len*Math.sin(r)).toFixed(2));
+}
+function tick(){
+  const now=new Date();
+  const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
+  const ts=`${pad(h)}:${pad(m)}:${pad(s)}`;
+  ['h-clock','big-clock'].forEach(id=>document.getElementById(id).textContent=ts);
+  const ds=`${DAYS[now.getDay()]}, ${MONTHS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  document.getElementById('h-date').textContent=`${DAYS[now.getDay()].substring(0,3).toUpperCase()} ${pad(now.getDate())} ${MONTHS[now.getMonth()].substring(0,3).toUpperCase()} ${now.getFullYear()}`;
+  document.getElementById('big-date').textContent=ds;
+  document.getElementById('unix-ts').textContent=Math.floor(now.getTime()/1000);
+  document.getElementById('day-year').textContent=`${getDOY(now)} / 365`;
+  document.getElementById('week-num').textContent=`W${getWeek(now)}`;
+  const off=-now.getTimezoneOffset(),sign=off>=0?'+':'-';
+  const offStr=`UTC${sign}${pad(Math.floor(Math.abs(off)/60))}:${pad(Math.abs(off)%60)}`;
+  document.getElementById('utc-off').textContent=offStr;
+  document.getElementById('tz-pill').textContent=`${Intl.DateTimeFormat().resolvedOptions().timeZone} · ${offStr}`;
+  rotateHand('hand-s',s*6,50,50,34);
+  rotateHand('hand-m',m*6+s*.1,50,50,30);
+  rotateHand('hand-h',(h%12)*30+m*.5,50,50,22);
+}
+setInterval(tick,1000);tick();
+
+/* ── Battery ── */
+async function initBattery(){
+  try{
+    const b=await navigator.getBattery();
+    function upd(){
+      const pct=Math.round(b.level*100);
+      const col=pct>60?'var(--g1)':pct>20?'var(--amber)':'var(--red)';
+      document.getElementById('batt-pct').textContent=pct+'%';
+      document.getElementById('batt-pct').style.color=col;
+      document.getElementById('batt-svg-pct').textContent=pct+'%';
+      const h=64*(pct/100);
+      document.getElementById('batt-fill-rect').setAttribute('height',h);
+      document.getElementById('batt-fill-rect').setAttribute('y',76-h);
+      document.getElementById('batt-fill-rect').style.fill=col;
+      document.getElementById('batt-status').textContent=b.charging?'⚡ CHARGING':'DISCHARGING';
+      document.getElementById('batt-status').style.color=b.charging?'var(--amber)':'var(--text)';
+      const eta=b.charging?b.chargingTime:b.dischargingTime;
+      if(eta&&eta!==Infinity){
+        const hh=Math.floor(eta/3600),mm=Math.floor((eta%3600)/60);
+        document.getElementById('batt-eta').textContent=hh>0?`${hh}h ${mm}m`:`${mm}m`;
+      }else document.getElementById('batt-eta').textContent=b.charging?'FULL SOON':'—';
+    }
+    upd();b.addEventListener('levelchange',upd);b.addEventListener('chargingchange',upd);
+  }catch(e){
+    document.getElementById('batt-pct').textContent='N/A';
+    document.getElementById('batt-status').textContent='API UNAVAIL';
+    document.getElementById('batt-svg-pct').textContent='—';
+  }
+}
+initBattery();
+document.getElementById('sys-platform').textContent=navigator.platform||'UNKNOWN';
+document.getElementById('sys-screen').textContent=`${screen.width}×${screen.height} @${window.devicePixelRatio||1}x`;
+document.getElementById('sys-lang').textContent=(navigator.language||'—').toUpperCase();
+
+/* ── Network API ── */
+function initNet(){
+  const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(conn){
+    function upd(){
+      const dl=conn.downlink||0,ul=conn.uplink||0;
+      document.getElementById('dl-val').textContent=dl?dl:'—';
+      document.getElementById('ul-val').textContent=ul?ul:'—';
+      const circ=188.5;
+      const dlo=circ-(circ*Math.min(dl/100,1));
+      const ulo=circ-(circ*Math.min((ul||dl*.3)/100,1));
+      document.getElementById('ring-dl').style.strokeDashoffset=dlo;
+      document.getElementById('ring-ul').style.strokeDashoffset=ulo;
+      document.getElementById('nc-type').textContent=(conn.effectiveType||conn.type||'—').toUpperCase();
+      document.getElementById('nc-rtt').textContent=(conn.rtt||'—')+'ms';
+      document.getElementById('nc-save').textContent=conn.saveData?'ON':'OFF';
+    }
+    upd();conn.addEventListener('change',upd);
+  }else{
+    document.getElementById('dl-val').textContent='—';
+    document.getElementById('ul-val').textContent='—';
+    document.getElementById('nc-type').textContent='NO API';
+  }
+  measurePing();
+}
+async function measurePing(){
+  try{
+    const t=performance.now();
+    await fetch('https://cloudflare.com/cdn-cgi/trace',{mode:'no-cors',cache:'no-store'});
+    document.getElementById('nc-ping').textContent=Math.round(performance.now()-t)+'ms';
+  }catch(e){document.getElementById('nc-ping').textContent='—ms';}
+}
+initNet();
+
+/* ── IP ── */
+async function fetchIP(){
+  try{
+    const r=await fetch('https://ipapi.co/json/');
+    const d=await r.json();
+    document.getElementById('ip-val').textContent=d.ip||'—';
+    document.getElementById('ip-sub').textContent=`${d.city||'?'}, ${d.country_name||'?'} · ${d.org||''}`;
+    document.getElementById('ip-isp').textContent=(d.org||'—').substring(0,20);
+    document.getElementById('ip-city').textContent=`${d.city||'?'}, ${d.region_code||'?'}`;
+    document.getElementById('ip-country').textContent=`${d.country_name||'—'}`;
+    document.getElementById('ip-tz').textContent=d.timezone||'—';
+    document.getElementById('ip-asn').textContent=d.asn||'—';
+    document.getElementById('ip-region').textContent=d.region||'—';
+    const code=d.country_code||'';
+    if(code) document.getElementById('ip-flag').textContent=code.toUpperCase().replace(/./g,c=>String.fromCodePoint(0x1F1E0-65+c.charCodeAt(0)));
+  }catch(e){document.getElementById('ip-val').textContent='FETCH ERROR';}
+}
+fetchIP();
+
+/* ── Power Estimation Engine ── */
+async function initPower(){
+  const ua=navigator.userAgent,plat=navigator.platform||'';
+  let profile={name:'Unknown',volt:12.0,voltRange:[11.4,12.6],tdp:65};
+  const hasBattAPI=typeof navigator.getBattery==='function';
+
+  if(/iPhone|iPad/.test(ua)){
+    profile={name:'iOS Device',volt:3.82,voltRange:[3.5,4.2],tdp:5};
+  }else if(/Android/.test(ua)){
+    profile={name:'Android',volt:3.85,voltRange:[3.5,4.35],tdp:8};
+  }else if(/Mac/.test(plat)||/Macintosh/.test(ua)){
+    const isAppleSi=navigator.hardwareConcurrency>=8&&/Mac/.test(plat);
+    profile={name:isAppleSi?'Apple Silicon':'Intel Mac',volt:11.1,voltRange:[10.8,12.6],tdp:isAppleSi?15:28};
+  }else if(/Win/.test(plat)||/Windows/.test(ua)){
+    const isLaptop=hasBattAPI;
+    profile={name:isLaptop?'Windows Laptop':'Windows Desktop',volt:isLaptop?11.1:12.0,voltRange:isLaptop?[10.8,12.6]:[11.4,12.6],tdp:isLaptop?15:65};
+  }else if(/Linux/.test(plat)||/Linux/.test(ua)){
+    profile={name:'Linux',volt:12.0,voltRange:[11.4,12.6],tdp:45};
+  }else if(/CrOS/.test(ua)){
+    profile={name:'ChromeOS',volt:11.4,voltRange:[10.8,12.0],tdp:10};
+  }
+
+  const cores=navigator.hardwareConcurrency||4;
+  const mem=navigator.deviceMemory||4;
+  document.getElementById('pw-os').textContent=profile.name;
+  document.getElementById('pw-cores').textContent=cores+' cores';
+  document.getElementById('pw-mem').textContent=(mem||'?')+' GB';
+
+  let battLevel=0.75,battCharging=false;
+  try{
+    const b=await navigator.getBattery();
+    battLevel=b.level; battCharging=b.charging;
+    if(b.voltage&&b.voltage>0){
+      profile.volt=b.voltage;
+      document.getElementById('pw-bvolt').textContent=b.voltage.toFixed(2)+'V ✓';
+      document.getElementById('pw-bvolt').style.color='var(--g1)';
+    }else{
+      const[lo,hi]=profile.voltRange;
+      profile.volt=lo+(hi-lo)*battLevel;
+      document.getElementById('pw-bvolt').textContent=profile.volt.toFixed(2)+'V ~';
+    }
+    b.addEventListener('levelchange',()=>{battLevel=b.level;});
+    b.addEventListener('chargingchange',()=>{battCharging=b.charging;});
+  }catch(e){
+    document.getElementById('pw-bvolt').textContent='NO API';
+  }
+
+  function updatePower(){
+    const memFactor=Math.min(mem/32,1)*0.12;
+    const coreFactor=Math.min(cores/16,1)*0.15;
+    const noise=(Math.random()-.5)*0.07;
+    const chargingBoost=battCharging?0.18:0;
+    const load=Math.min(Math.max(0.12+memFactor+coreFactor+noise+chargingBoost,0.05),0.95);
+
+    const volt=profile.volt+(Math.random()-.5)*0.06;
+    const watt=profile.tdp*load*(battCharging?1.25:1);
+    const amp=watt/volt;
+
+    document.getElementById('pw-volt').textContent=volt.toFixed(2);
+    document.getElementById('pw-amp').textContent=amp.toFixed(2);
+    document.getElementById('pw-watt').textContent=watt.toFixed(1);
+    const lpct=Math.round(load*100);
+    document.getElementById('pw-load-pct').textContent=lpct+'%';
+    document.getElementById('pw-bar').style.width=lpct+'%';
+    document.getElementById('pw-bar').style.background=
+      load>0.7?'linear-gradient(90deg,var(--amber),var(--red))':
+      load>0.4?'linear-gradient(90deg,var(--g2),var(--amber))':
+      'linear-gradient(90deg,var(--g2),var(--g1))';
+  }
+  updatePower();
+  setInterval(updatePower,2200);
+}
+initPower();
+
+/* ── Loader ── */
+const msgs=['INITIALIZING SENSORS...','FETCHING GEOLOCATION...','LOADING NETWORK API...','READY.'];
+let mi=0;
+const li=setInterval(()=>{
+  if(++mi>=msgs.length){clearInterval(li);}
+  else document.getElementById('loader-status').textContent=msgs[mi];
+},450);
+setTimeout(()=>{
+  const l=document.getElementById('loader');
+  l.style.opacity='0';
+  setTimeout(()=>l.style.display='none',600);
+},1900);
+</script>
 </body>
 </html>
